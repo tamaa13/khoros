@@ -7,5 +7,8 @@ models/cache/
 day0/artifacts/
 *.wav
 
+# Persisted agent memory (per-user, not for the repo)
+data/
+
 # OS / editor
 .DS_Store
