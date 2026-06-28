@@ -1,0 +1,11 @@
+node_modules/
+*.log
+
+# QVAC model cache + generated audio artifacts
+.qvac/
+models/cache/
+day0/artifacts/
+*.wav
+
+# OS / editor
+.DS_Store

@@ -1,0 +1,13 @@
+{
+  "name": "khoros",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A society of local QVAC agents around WC2026 (Tether Developers Cup).",
+  "scripts": {
+    "day0": "bun day0/check.ts"
+  },
+  "dependencies": {
+    "@qvac/sdk": "0.13.5"
+  }
+}
