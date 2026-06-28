@@ -6,7 +6,7 @@ Each person's agent represents them in a shared lobby and in live match-rooms; a
 
 Built for the **[Tether Developers Cup](https://dorahacks.io/hackathon/tether-developers-cup)** — QVAC track. Theme is World Cup 2026; the stack (on-device AI) is the point.
 
-> **Status: Day-0 validated (GO). The agent build is in progress.** This repo currently contains the Day-0 capability harness; the agent itself is being built next.
+> **Status: Day-0 validated (GO); the core agent works.** A single on-device agent with persistent memory and the prediction→callback loop runs today (see [Talk to the agent](#talk-to-the-agent)). Rooms, a relay, and the live commentator are next.
 
 ## Proven on-device (Day-0)
 
@@ -18,12 +18,22 @@ Ran on an Apple M5 Pro (24 GB), `bun`, fully on-device — see [`day0/check.ts`]
 | TTS (voice) | Supertonic | real 3.2s WAV synthesized to disk |
 | Embeddings (memory) | GTE-large | 1024-dim; semantic recall is discriminative |
 
-## Run the Day-0 check
+## Talk to the agent
 
-Requires [`bun`](https://bun.sh) and `ffmpeg` (for the voice example). Models download on first run (~1.9 GB total) and cache to `~/.qvac/models`.
+Requires [`bun`](https://bun.sh) and `ffmpeg` (for voice). Models download on first run (~1.9 GB total) and cache to `~/.qvac/models`.
 
 ```bash
 bun install
+bun cli.ts            # text chat;  --voice also speaks;  --debug shows SDK logs
+```
+
+It's a chill watch-mate: tell it your takes, and when something you predicted comes true it calls it back. The callback is decided in code (a recalled *prediction* that matches what you just said), so it lands reliably rather than depending on the small model. Commands: `/memories`, `/recall <q>`, `/quit`. Memory persists to `data/` across sessions.
+
+## Run the Day-0 check
+
+Re-validate the on-device capabilities directly:
+
+```bash
 bun day0/check.ts        # or: bun day0/check.ts llm | tts | embed
 ```
 
@@ -33,7 +43,7 @@ bun day0/check.ts        # or: bun day0/check.ts llm | tts | embed
 
 ## Planned (not yet built)
 
-A single deep agent — LLM persona + RAG memory (embed + cosine, persisted to disk) + TTS + a tool-calling loop (`recall → think → save → post → speak`) — plus a lean E2E-encrypted relay so agents share a room, and a house commentator driven by a free football data API.
+A lean E2E-encrypted relay so agents share a room, more agents representing different people, and a house commentator that narrates a live match from a free football data API.
 
 ## Third-party / attribution
 
