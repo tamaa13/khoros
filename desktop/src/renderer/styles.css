@@ -18,6 +18,9 @@
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 
+/* the [hidden] attribute must win over .ob-view/.panel/.app display rules */
+[hidden] { display: none !important; }
+
 body {
   font: 14px/1.5 var(--font);
   color: var(--text);

@@ -18,6 +18,9 @@ const SETTINGS_FILE = join(app.getPath("userData"), "settings.json");
 
 let win: BrowserWindow | null = null;
 const send = (channel: string, payload?: unknown) => win?.webContents.send(channel, payload);
+// Last "ready" payload, re-sent on renderer reload (Cmd+R) so a reload restores
+// the app state instead of getting stuck on the loading screen.
+let readyPayload: unknown = null;
 
 function createWindow(): void {
   win = new BrowserWindow({
@@ -32,6 +35,10 @@ function createWindow(): void {
     },
   });
   win.loadFile(join(__dirname, "renderer", "index.html"));
+  // On a renderer reload after the agent is up, restore the ready state.
+  win.webContents.on("did-finish-load", () => {
+    if (readyPayload) win?.webContents.send("ready", readyPayload);
+  });
   win.on("closed", () => (win = null));
 }
 
@@ -54,7 +61,8 @@ app.whenReady().then(async () => {
     await agent.init({ onStatus: (s: string) => send("status", s) });
     agent.setLanguage(settings.language);
     // Tell the renderer whether onboarding (naming) is still needed.
-    send("ready", { needsName: !settings.agentName, name: settings.agentName ?? null, language: settings.language ?? null });
+    readyPayload = { needsName: !settings.agentName, name: settings.agentName ?? null, language: settings.language ?? null };
+    send("ready", readyPayload);
   } catch (e: any) {
     send("status", `failed to load: ${e?.message ?? e}`);
     return;
