@@ -15,6 +15,9 @@ const QvacForgePlugin = require("@qvac/sdk/electron-forge");
 module.exports = {
   packagerConfig: {
     name: "Khoros",
+    // Deterministic binary name so makers (esp. maker-deb) find it; without this
+    // the Linux .deb maker looked for "khoros-desktop" while the binary was "Khoros".
+    executableName: "khoros",
     appBundleId: "io.khoros.desktop",
     asar: true,
     // runtime needs only the built main + @qvac/sdk; skip source/build tooling
@@ -29,7 +32,7 @@ module.exports = {
     {
       name: "@electron-forge/maker-deb",
       platforms: ["linux"],
-      config: { options: { name: "khoros", productName: "Khoros", genericName: "World Cup Agent", categories: ["Utility"] } },
+      config: { options: { name: "khoros", bin: "khoros", productName: "Khoros", genericName: "World Cup Agent", categories: ["Utility"] } },
     },
     // Portable zip — all desktop platforms
     { name: "@electron-forge/maker-zip", platforms: ["darwin", "linux", "win32"] },
