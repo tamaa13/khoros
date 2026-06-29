@@ -47,6 +47,10 @@ app.whenReady().then(async () => {
 
   const settings: Settings = loadSettings(SETTINGS_FILE);
   const persist = () => saveSettings(SETTINGS_FILE, settings);
+  // Keep readyPayload current with settings so a reload reflects naming/lang.
+  const refreshReady = () => {
+    readyPayload = { needsName: !settings.agentName, name: settings.agentName ?? null, language: settings.language ?? null };
+  };
 
   // Import the agent core after env + app are ready (and lazily, so the model
   // load doesn't block window creation).
@@ -60,8 +64,7 @@ app.whenReady().then(async () => {
     // an indeterminate "downloading the model…" state from onStatus instead.
     await agent.init({ onStatus: (s: string) => send("status", s) });
     agent.setLanguage(settings.language);
-    // Tell the renderer whether onboarding (naming) is still needed.
-    readyPayload = { needsName: !settings.agentName, name: settings.agentName ?? null, language: settings.language ?? null };
+    refreshReady();
     send("ready", readyPayload);
   } catch (e: any) {
     send("status", `failed to load: ${e?.message ?? e}`);
@@ -83,6 +86,7 @@ app.whenReady().then(async () => {
     Object.assign(settings, patch);
     if ("language" in patch) agent.setLanguage(settings.language);
     persist();
+    refreshReady(); // so a reload after naming/lang-change reflects it
     return { ...settings };
   });
 
