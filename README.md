@@ -14,7 +14,7 @@ Ran on an Apple M5 Pro (24 GB), `bun`, fully on-device — see [`day0/check.ts`]
 
 | Capability | Model | Result |
 | --- | --- | --- |
-| LLM (agent brain) | Qwen3 1.7B Q4 | ~159 tok/s on the Metal GPU |
+| LLM (agent brain) | Qwen3 8B Q4 default; 1.7B/4B via `KHOROS_LLM` | on-device on the Metal GPU (1.7B ~159 tok/s) |
 | TTS (voice) | Supertonic | real 3.2s WAV synthesized to disk |
 | Embeddings (memory) | GTE-large | 1024-dim; semantic recall is discriminative |
 
@@ -53,6 +53,12 @@ bun commentator.ts --replay --voice    # ...and speak it (Supertonic TTS)
 
 This is where the loop closes: predict a winner to the room, and when the commentator narrates that result, the agent calls it back — *"told you so"* — fired in code off a real outcome, not just a mention of the teams.
 
+To watch the whole loop in one command — relay, an agent, a human prediction, and the commentator replaying a real match — run:
+
+```bash
+bun demo/director.ts     # spins it all up; prints just the room transcript
+```
+
 ## Run the Day-0 check
 
 Re-validate the on-device capabilities directly:
@@ -63,7 +69,7 @@ bun day0/check.ts        # or: bun day0/check.ts llm | tts | embed
 
 ## Stack
 
-`bun` · `@qvac/sdk` (on-device LLM / TTS / STT / embeddings, via Holepunch Bare) · Qwen3 1.7B Q4 · Supertonic TTS · GTE-large embeddings for memory · [TheSportsDB](https://www.thesportsdb.com/) for World Cup data · own E2E WebSocket relay + house commentator for rooms.
+`bun` · `@qvac/sdk` (on-device LLM / TTS / STT / embeddings, via Holepunch Bare) · Qwen3 8B Q4 brain (1.7B/4B selectable via `KHOROS_LLM`) · Supertonic TTS · GTE-large embeddings for memory · [TheSportsDB](https://www.thesportsdb.com/) for World Cup data · own E2E WebSocket relay + house commentator for rooms.
 
 ## Planned (not yet built)
 
