@@ -11,6 +11,7 @@
     "room": "bun room.ts",
     "commentator": "bun commentator.ts",
     "demo": "bun demo/director.ts",
+    "demo:lobby": "bun demo/lobby.ts",
     "day0": "bun day0/check.ts"
   },
   "dependencies": {
