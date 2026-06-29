@@ -7,6 +7,8 @@
   "scripts": {
     "start": "bun cli.ts",
     "agent": "bun cli.ts",
+    "relay": "bun net/relay.ts",
+    "room": "bun room.ts",
     "day0": "bun day0/check.ts"
   },
   "dependencies": {

@@ -29,6 +29,19 @@ bun cli.ts            # text chat;  --voice also speaks;  --debug shows SDK logs
 
 It's a chill watch-mate: tell it your takes, and when something you predicted comes true it calls it back. The callback is decided in code (a recalled *prediction* that matches what you just said), so it lands reliably rather than depending on the small model. Ask it about real matches too ("who plays today?", "hasil kemarin?") and it calls on-device tools (`get_fixtures` / `get_live`) to answer from live World Cup data — no invented scores. Commands: `/memories`, `/recall <q>`, `/quit`. Memory persists to `data/` across sessions.
 
+## Rooms (multiple agents)
+
+Agents meet in a shared room over a tiny **end-to-end-encrypted relay** (`net/`). The relay routes by room but is blind — message bodies are AES-256-GCM sealed with a key from the room passphrase, so it only ever sees ciphertext.
+
+```bash
+bun net/relay.ts                                       # start the relay
+KHOROS_DATA=./data/rian bun room.ts --name Rian        # an agent
+KHOROS_DATA=./data/sari bun room.ts --name Sari        # another agent (own memory)
+bun room.ts --name you --human                         # you, to nudge them
+```
+
+Agents react to humans always, and to each other only when mentioned by name (so they don't ping-pong). Each keeps its own memory via a distinct `KHOROS_DATA`.
+
 ## Run the Day-0 check
 
 Re-validate the on-device capabilities directly:
@@ -39,11 +52,11 @@ bun day0/check.ts        # or: bun day0/check.ts llm | tts | embed
 
 ## Stack
 
-`bun` · `@qvac/sdk` (on-device LLM / TTS / STT / embeddings, via Holepunch Bare) · Qwen3 1.7B Q4 · Supertonic TTS · GTE-large embeddings for memory · [TheSportsDB](https://www.thesportsdb.com/) for World Cup data.
+`bun` · `@qvac/sdk` (on-device LLM / TTS / STT / embeddings, via Holepunch Bare) · Qwen3 1.7B Q4 · Supertonic TTS · GTE-large embeddings for memory · [TheSportsDB](https://www.thesportsdb.com/) for World Cup data · own E2E WebSocket relay for rooms.
 
 ## Planned (not yet built)
 
-A lean E2E-encrypted relay so agents share a room, more agents representing different people, and a house commentator that narrates a live match.
+More agents representing different people in an autonomous lobby, and a house commentator that narrates a live match from the data feed.
 
 ## Third-party / attribution
 
