@@ -9,6 +9,7 @@
     "agent": "bun cli.ts",
     "relay": "bun net/relay.ts",
     "room": "bun room.ts",
+    "commentator": "bun commentator.ts",
     "day0": "bun day0/check.ts"
   },
   "dependencies": {
