@@ -12,6 +12,7 @@ export interface TurnResult {
   recalled: Recalled[];
   prediction: string | null; // new prediction extracted from this message
   callback: string | null; // past prediction this message confirmed, if any
+  tools: string[]; // football tools the model called this turn
 }
 
 export interface InitOptions {
@@ -52,7 +53,10 @@ export class Agent {
       (r) => r.entry.kind === "prediction" && r.score >= CALLBACK_MIN_SCORE,
     );
 
-    const reply = await this.brain.respond(userText, recalled, confirmed?.entry.text ?? null);
+    const tools: string[] = [];
+    const reply = await this.brain.respond(userText, recalled, confirmed?.entry.text ?? null, (t) =>
+      tools.push(t),
+    );
 
     await this.memory.save(userText, "chat");
     const prediction = await this.brain.extractPrediction(userText);
@@ -60,7 +64,7 @@ export class Agent {
 
     if (this.voice) await this.voice.speak(reply);
 
-    return { reply, recalled, prediction, callback: confirmed?.entry.text ?? null };
+    return { reply, recalled, prediction, callback: confirmed?.entry.text ?? null, tools };
   }
 
   async close(): Promise<void> {

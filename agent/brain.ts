@@ -3,13 +3,44 @@
  * and a lightweight prediction-extraction pass.
  */
 import { completion, loadModel, unloadModel } from "@qvac/sdk";
+import { z } from "zod";
 import { LLM_CTX_SIZE, MODELS, PERSONA } from "../config";
+import { getFixtures, getLive } from "../tools/football";
 import type { Recalled } from "./memory";
 
 export interface Msg {
-  role: "system" | "user" | "assistant";
+  role: "system" | "user" | "assistant" | "tool";
   content: string;
 }
+
+// Tool-calling is the QVAC showcase: the model decides when it needs real World
+// Cup data, calls a tool, and answers from the result.
+const TOOLS = [
+  {
+    name: "get_fixtures",
+    description:
+      "Look up 2026 World Cup matches. when='upcoming' for the schedule of matches not played yet. when='recent' for matches that already finished and their FINAL SCORES — use this for any question about results, scores, or what happened (including yesterday or the last few days).",
+    parameters: z.object({
+      when: z
+        .enum(["upcoming", "recent"])
+        .describe("'upcoming' = future schedule; 'recent' = finished matches with final scores"),
+    }),
+  },
+  {
+    name: "get_live",
+    description:
+      "Look up matches scheduled specifically for TODAY in the 2026 World Cup. Use only when the user asks what is on today or playing right now — not for past results.",
+    parameters: z.object({}),
+  },
+];
+
+const EXECUTORS: Record<string, (args: any) => Promise<string>> = {
+  get_fixtures: (args) => getFixtures(args?.when ?? "upcoming"),
+  get_live: () => getLive(),
+};
+
+const TOOLS_HINT =
+  "\n\nYou can call tools to look up real 2026 World Cup fixtures, results, and today's matches. Use them whenever the user asks about actual matches or scores; otherwise just chat. Never invent scores or fixtures.";
 
 function stripThink(s: string): string {
   return s.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
@@ -48,7 +79,7 @@ export class Brain {
   async init(onProgress?: (p: { percentage?: number }) => void): Promise<void> {
     this.modelId = await loadModel({
       modelSrc: MODELS.llm,
-      modelConfig: { ctx_size: LLM_CTX_SIZE },
+      modelConfig: { ctx_size: LLM_CTX_SIZE, tools: true },
       onProgress,
     });
   }
@@ -65,8 +96,9 @@ export class Brain {
     userText: string,
     recalled: Recalled[],
     confirmedPrediction: string | null = null,
+    onTool?: (name: string) => void,
   ): Promise<string> {
-    let system = PERSONA + memoryBlock(recalled);
+    let system = PERSONA + memoryBlock(recalled) + TOOLS_HINT;
     if (confirmedPrediction) {
       system += `\n\nRIGHT NOW: your friend earlier predicted "${confirmedPrediction}", and their current message confirms it. Open your reply by calling that prediction back in their language — a warm, smug "told you so" / "kan bener kata lo" — then react in one short line.`;
     }
@@ -74,6 +106,32 @@ export class Brain {
       { role: "system", content: system },
       { role: "user", content: userText },
     ];
+
+    // Tool-call loop: the model may call football tools; we run them, feed the
+    // results back, and let it answer. Capped so a confused model can't loop.
+    for (let hop = 0; hop < 3; hop++) {
+      const run = completion({ modelId: this.id(), history: messages, tools: TOOLS, stream: false });
+      const final: any = await run.final;
+      let calls: any[] = Array.isArray(final?.toolCalls) ? final.toolCalls : [];
+      if (calls.length === 0) {
+        try {
+          calls = (await run.toolCalls) ?? [];
+        } catch {
+          calls = [];
+        }
+      }
+      if (calls.length === 0) return sanitize(readReply(final));
+
+      messages.push({ role: "assistant", content: readReply(final) });
+      for (const call of calls) {
+        onTool?.(call.name);
+        const result = await (EXECUTORS[call.name]?.(call.arguments) ??
+          Promise.resolve(`Unknown tool: ${call.name}`));
+        messages.push({ role: "tool", content: result });
+      }
+    }
+
+    // Hop budget spent — answer with whatever tool results are now in context.
     const run = completion({ modelId: this.id(), history: messages, stream: false });
     return sanitize(readReply(await run.final));
   }

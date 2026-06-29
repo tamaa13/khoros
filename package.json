@@ -10,6 +10,7 @@
     "day0": "bun day0/check.ts"
   },
   "dependencies": {
-    "@qvac/sdk": "0.13.5"
+    "@qvac/sdk": "0.13.5",
+    "zod": "^4.4.3"
   }
 }
