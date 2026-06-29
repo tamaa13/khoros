@@ -68,12 +68,12 @@ export class RoomClient {
     this.send({ t: "join", room });
   }
 
-  post(text: string, next?: string, ctl?: string): void {
+  post(text: string, next?: string, ctl?: string, kind?: Participant): void {
     if (!this.ws || !this.key || !this.room) throw new Error("post() before join()");
     const msg: RoomMessage = {
       room: this.room,
       from: this.name,
-      kind: this.kind,
+      kind: kind ?? this.kind,
       text,
       ts: Date.now(),
       ...(next ? { next } : {}),

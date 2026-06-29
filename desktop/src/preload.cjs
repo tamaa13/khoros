@@ -21,4 +21,5 @@ contextBridge.exposeInMainWorld("khoros", {
   onLobbyEvent: (cb) => ipcRenderer.on("lobby:event", (_e, ev) => cb(ev)),
   matches: () => ipcRenderer.invoke("matches:list"),
   debate: (label) => ipcRenderer.invoke("lobby:debate", label),
+  result: (text) => ipcRenderer.invoke("lobby:result", text),
 });

@@ -109,17 +109,29 @@ app.whenReady().then(async () => {
   ipcMain.handle("schedule", (_e, when: "upcoming" | "recent" = "upcoming") => getFixtures(when));
 
   // Lobby room list: today's matches + the Replay Room pick (from the real schedule).
+  const resultText = (f: any): string => {
+    const winner = f.homeScore > f.awayScore ? f.home : f.awayScore > f.homeScore ? f.away : null;
+    return `FULL TIME — ${f.home} ${f.homeScore}-${f.awayScore} ${f.away}.${winner ? ` ${winner} won!` : " A draw!"} (real result, source: TheSportsDB)`;
+  };
   ipcMain.handle("matches:list", async () => {
     const [today, replay] = await Promise.all([todayMatches(), lastDecidedMatch()]);
-    const label = (f: any) => `${f.home} v ${f.away}`;
+    const mk = (f: any) => {
+      const played = f.homeScore !== null && f.awayScore !== null;
+      return { id: f.id ?? `${f.home}-${f.away}`, label: `${f.home} v ${f.away}`, played, result: played ? resultText(f) : null };
+    };
     return {
-      today: today.map((f: any) => ({ id: f.id ?? `${f.home}-${f.away}`, label: label(f), played: f.homeScore !== null })),
-      replay: replay ? { label: `${replay.home} ${replay.homeScore}-${replay.awayScore} ${replay.away}` } : null,
+      today: today.map(mk),
+      replay: replay ? { label: `${replay.home} ${replay.homeScore}-${replay.awayScore} ${replay.away}`, result: resultText(replay) } : null,
     };
   });
   // The user picks a match → their agent opens a debate on it in the lobby.
   ipcMain.handle("lobby:debate", (_e, matchLabel: string) => {
     relayLobby?.kickoffTopic?.(`${matchLabel} — who wins, and why?`);
+    return { ok: Boolean(relayLobby) };
+  });
+  // The user drops a real result into the lobby → agents who called it react.
+  ipcMain.handle("lobby:result", (_e, text: string) => {
+    relayLobby?.announceResult?.(text);
     return { ok: Boolean(relayLobby) };
   });
 

@@ -322,9 +322,14 @@ async function loadMatches() {
   if (!today.length) chip("No matches today — chat in the lobby", "muted", () => {});
   for (const m of today) {
     chip(m.label, m.played ? "played" : "live", async () => {
-      await window.khoros.debate(m.label);
       if (lobbyIntro) lobbyIntro.hidden = true;
-      addSystem(lobbyThread, `Your agent opened a debate: ${m.label}.`);
+      if (m.played && m.result) {
+        await window.khoros.result(m.result);
+        addSystem(lobbyThread, `Commentator dropped the result: ${m.label}.`);
+      } else {
+        await window.khoros.debate(m.label);
+        addSystem(lobbyThread, `Your agent opened a debate: ${m.label}.`);
+      }
     });
   }
   if (data && data.replay) {
