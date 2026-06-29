@@ -6,6 +6,10 @@
  */
 import { build } from "esbuild";
 import { cpSync, mkdirSync, rmSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 rmSync(".build", { recursive: true, force: true });
 mkdirSync(".build", { recursive: true });
@@ -20,6 +24,10 @@ await build({
   outfile: ".build/main.mjs",
   // electron is provided by the runtime; @qvac/sdk must stay unbundled (native).
   external: ["electron", "@qvac/sdk"],
+  // The agent core lives outside desktop/ (../agent), so its bare deps (zod) would
+  // otherwise resolve from the repo-root node_modules — absent in a desktop-only
+  // install (e.g. CI). Fall back to desktop/node_modules so the bundle is self-contained.
+  nodePaths: [join(here, "node_modules")],
   logLevel: "info",
 });
 
