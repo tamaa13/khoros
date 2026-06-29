@@ -17,7 +17,7 @@
  */
 import "./quiet"; // before @qvac/sdk
 import { createInterface } from "node:readline";
-import { Agent } from "./agent/loop";
+import { Agent, reportsResult } from "./agent/loop";
 import { RoomClient, type RoomMessage } from "./net/client";
 
 function arg(flag: string, fallback?: string): string | undefined {
@@ -90,17 +90,33 @@ if (asHuman) {
 
   async function speak(stimulus: RoomMessage | null): Promise<void> {
     if (lobby && TURN_DELAY) await sleep(TURN_DELAY); // pace so it's readable
+    const kickoff = stimulus === null;
+    const result = stimulus?.kind === "commentator"; // a real outcome, not banter
+    const human = stimulus?.kind === "human";
+    const baton = kickoff || stimulus?.next === NAME; // a rotation turn (vs a broadcast)
     const userText = stimulus ? `${stimulus.from}: ${stimulus.text}` : KICKOFF;
     status(`${NAME} ${stimulus ? `reacting to ${stimulus.from}` : "opening the lobby"}…`);
     const { reply, tools, callback } = await agent.turn(userText, {
-      learnPredictions: stimulus?.kind !== "commentator",
+      // In the lobby an agent voices its own take, so it remembers that (below)
+      // rather than mining peers; a plain room mines what others say.
+      learnPredictions: lobby ? false : !result,
+      // in the lobby, only let the magic fire on real news — the result or a human
+      allowCallback: !lobby || result || human,
+      // in the lobby agents just opine; the commentator is the source of real data
+      useTools: !lobby,
     });
     if (tools.length) status(`🔧 ${tools.join(", ")}`);
     if (callback) status(`↩ called back: ${callback}`);
-    turns += 1;
+    // On its own rotation turn, file away any prediction it just made so it can
+    // call its own shot back when the commentator's result lands.
+    if (lobby && baton && !result) await agent.rememberOwnPrediction(reply);
+    if (baton) turns += 1; // only rotation turns count toward the cap
     const done = lobby && MAX_TURNS > 0 && turns >= MAX_TURNS;
-    client.post(reply, lobby && !done ? pickNext(reply) : undefined);
-    if (done) status(`${NAME} done after ${turns} turns — dropping the baton.`);
+    // Pass the baton on a rotation turn (or when the host fields a human); a
+    // reaction to the commentator's broadcast doesn't hijack the rotation.
+    const passBaton = lobby && !done && (baton || (isStarter && human));
+    client.post(reply, passBaton ? pickNext(reply) : undefined);
+    if (done && baton) status(`${NAME} done after ${turns} turns — dropping the baton.`);
   }
 
   async function drain(): Promise<void> {
@@ -121,8 +137,11 @@ if (asHuman) {
     if (m.from === NAME) return;
     status(`saw ${m.from} [${m.kind}]: ${m.text.slice(0, 70)}`);
     const take = lobby
-      ? // my baton, or — as the host — a human/commentator dropping in
-        m.next === NAME || (isStarter && (m.kind === "human" || m.kind === "commentator"))
+      ? // my baton; the commentator's *result* (not its buildup narration), which
+        // everyone reacts to; or — as host — a human dropping in
+        m.next === NAME ||
+        (m.kind === "commentator" && reportsResult(m.text)) ||
+        (isStarter && m.kind === "human")
       : m.kind === "human" || m.kind === "commentator" || mentioned(m.text);
     if (take) {
       queue.push(m);
