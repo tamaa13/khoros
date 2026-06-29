@@ -24,12 +24,18 @@ export interface TurnOptions {
   // Extract + remember a prediction from this message. Off for match commentary,
   // which narrates outcomes rather than stating the speaker's own predictions.
   learnPredictions?: boolean;
+  // Allow a "told you so" callback this turn. Off during lobby banter so it only
+  // fires on real news (the commentator's result), not hypothetical chatter.
+  allowCallback?: boolean;
+  // Let the agent call football tools this turn. Off in the lobby so agents opine
+  // instead of looking up (and spoiling) a result the commentator will reveal.
+  useTools?: boolean;
 }
 
 // A callback only makes sense when the new message actually reports an outcome —
 // not just because it mentions the same teams as an earlier prediction. The
 // score pattern excludes dates (the lookbehind/lookahead reject "2026-06-28").
-function reportsResult(text: string): boolean {
+export function reportsResult(text: string): boolean {
   return (
     /(?<![\d-])\d{1,2}\s*[-–]\s*\d{1,2}(?![\d-])/.test(text) ||
     /\b(won|win|wins|winner|beat|beats|defeat|defeats|lost|menang|kalah|imbang|draw|full[ -]?time|final whistle|juara|champions?)\b/i.test(
@@ -67,13 +73,23 @@ export class Agent {
     // The magic: when this message reports an outcome that confirms a recalled
     // prediction (strong match), have the agent call it back. Gated on a real
     // result so it fires once on the news, not on every mention of the teams.
-    const confirmed = reportsResult(userText)
-      ? recalled.find((r) => r.entry.kind === "prediction" && r.score >= CALLBACK_MIN_SCORE)
-      : undefined;
+    let confirmed =
+      (opts.allowCallback ?? true) && reportsResult(userText)
+        ? recalled.find((r) => r.entry.kind === "prediction" && r.score >= CALLBACK_MIN_SCORE)
+        : undefined;
+    // Topic match isn't enough — verify the outcome actually confirms the call,
+    // so a rival who picked the loser doesn't also get to say "told you so".
+    if (confirmed && !(await this.brain.confirmsPrediction(confirmed.entry.text, userText))) {
+      confirmed = undefined;
+    }
 
     const tools: string[] = [];
-    const reply = await this.brain.respond(userText, recalled, confirmed?.entry.text ?? null, (t) =>
-      tools.push(t),
+    const reply = await this.brain.respond(
+      userText,
+      recalled,
+      confirmed?.entry.text ?? null,
+      (t) => tools.push(t),
+      opts.useTools ?? true,
     );
 
     await this.memory.save(userText, "chat");
@@ -86,6 +102,15 @@ export class Agent {
     if (this.voice) await this.voice.speak(reply);
 
     return { reply, recalled, prediction, callback: confirmed?.entry.text ?? null, tools };
+  }
+
+  // Remember a prediction the agent itself just made (from its own reply), so it
+  // can later call its own shot back. Used in the lobby, where each agent voices
+  // its own take rather than reacting to someone else's.
+  async rememberOwnPrediction(reply: string): Promise<string | null> {
+    const prediction = await this.brain.extractPrediction(reply);
+    if (prediction) await this.memory.save(prediction, "prediction");
+    return prediction;
   }
 
   async close(): Promise<void> {
