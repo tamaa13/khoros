@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline';" />
+    <title>Khoros</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="brand">Khoros</div>
+      <div class="tag">your World Cup watch-mate — on device</div>
+    </header>
+
+    <div id="status" class="status">starting…</div>
+
+    <main id="thread" aria-live="polite"></main>
+
+    <form id="composer" autocomplete="off">
+      <input id="input" type="text" placeholder="Talk about the World Cup…" disabled />
+      <button id="send" type="submit" disabled>Send</button>
+    </form>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>
