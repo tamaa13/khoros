@@ -7,6 +7,14 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadSettings, saveSettings, type Settings } from "./settings";
+import { createRequire } from "node:module";
+
+// Electron's main process (Node 20) has no global WebSocket, which RoomClient
+// (net/client.ts) needs for the relay lobby. Load `ws` with a real CJS require
+// at runtime — bundling it into this ESM file breaks ws's internal requires.
+if (typeof (globalThis as any).WebSocket === "undefined") {
+  (globalThis as any).WebSocket = createRequire(import.meta.url)("ws").WebSocket;
+}
 
 // ESM output has no __dirname — recreate it from import.meta.url.
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -133,9 +141,12 @@ app.whenReady().then(async () => {
     const lobby = new RelayLobby(agent, settings.agentName, RELAY_URL, LOBBY_ROOM, LOBBY_PASS, LOBBY_TOPIC, (e: unknown) => send("lobby:event", e));
     relayLobby = lobby;
     try {
+      console.error("[lobby] connecting to", RELAY_URL);
       await lobby.connect();
+      console.error("[lobby] connected");
     } catch (e: any) {
       relayLobby = null;
+      console.error("[lobby] connect failed:", e?.message ?? e);
       send("lobby:event", { type: "status", text: "lobby offline — relay unreachable" });
     }
   }
