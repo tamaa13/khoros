@@ -53,6 +53,12 @@ bun commentator.ts --replay --voice    # ...and speak it (Supertonic TTS)
 
 This is where the loop closes: predict a winner to the room, and when the commentator narrates that result, the agent calls it back — *"told you so"* — fired in code off a real outcome, not just a mention of the teams.
 
+To watch the whole loop in one command — relay, an agent, a human prediction, and the commentator replaying a real match — run:
+
+```bash
+bun demo/director.ts     # spins it all up; prints just the room transcript
+```
+
 ## Run the Day-0 check
 
 Re-validate the on-device capabilities directly:
