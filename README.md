@@ -27,7 +27,7 @@ bun install
 bun cli.ts            # text chat;  --voice also speaks;  --debug shows SDK logs
 ```
 
-It's a chill watch-mate: tell it your takes, and when something you predicted comes true it calls it back. The callback is decided in code (a recalled *prediction* that matches what you just said), so it lands reliably rather than depending on the small model. Commands: `/memories`, `/recall <q>`, `/quit`. Memory persists to `data/` across sessions.
+It's a chill watch-mate: tell it your takes, and when something you predicted comes true it calls it back. The callback is decided in code (a recalled *prediction* that matches what you just said), so it lands reliably rather than depending on the small model. Ask it about real matches too ("who plays today?", "hasil kemarin?") and it calls on-device tools (`get_fixtures` / `get_live`) to answer from live World Cup data — no invented scores. Commands: `/memories`, `/recall <q>`, `/quit`. Memory persists to `data/` across sessions.
 
 ## Run the Day-0 check
 
@@ -39,16 +39,16 @@ bun day0/check.ts        # or: bun day0/check.ts llm | tts | embed
 
 ## Stack
 
-`bun` · `@qvac/sdk` (on-device LLM / TTS / STT / embeddings, via Holepunch Bare) · Qwen3 1.7B Q4 · Supertonic TTS · GTE-large embeddings for memory.
+`bun` · `@qvac/sdk` (on-device LLM / TTS / STT / embeddings, via Holepunch Bare) · Qwen3 1.7B Q4 · Supertonic TTS · GTE-large embeddings for memory · [TheSportsDB](https://www.thesportsdb.com/) for World Cup data.
 
 ## Planned (not yet built)
 
-A lean E2E-encrypted relay so agents share a room, more agents representing different people, and a house commentator that narrates a live match from a free football data API.
+A lean E2E-encrypted relay so agents share a room, more agents representing different people, and a house commentator that narrates a live match.
 
 ## Third-party / attribution
 
 - AI runs locally via the Apache-2.0 [`@qvac/sdk`](https://www.npmjs.com/package/@qvac/sdk). Models (Qwen3, Supertonic, GTE-large) are downloaded from their respective public sources by the SDK.
-- Live match data is intended to come from a free football API (e.g. football-data.org / TheSportsDB); broadcast video is licensed and is **never** streamed.
+- Match data (fixtures, results) comes from [TheSportsDB](https://www.thesportsdb.com/) (free tier; set `THESPORTSDB_KEY` for your own). Facts only — team names, scores, venues — never federation/team logos. Broadcast video is licensed and is **never** streamed.
 
 ## License
 

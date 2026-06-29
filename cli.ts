@@ -57,8 +57,9 @@ async function handle(line: string): Promise<boolean> {
     return false;
   }
 
-  const { reply, prediction, callback } = await agent.turn(text);
+  const { reply, prediction, callback, tools } = await agent.turn(text);
   console.log(`\nkhoros › ${reply}\n`);
+  if (tools.length) status(`🔧 used: ${tools.join(", ")}`);
   if (callback) status(`↩ called back: ${callback}`);
   if (prediction) status(`remembered: ${prediction}`);
   return false;
