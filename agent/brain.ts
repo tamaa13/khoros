@@ -51,6 +51,7 @@ function stripThink(s: string): string {
 function sanitize(s: string): string {
   return s
     .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{1F1E6}-\u{1F1FF}]/gu, "")
+    .replace(/<\/?[a-zA-Z][^>]{0,40}>/g, "") // pseudo-tags like <smile>, <told you so>
     .replace(/\*[^*\n]{1,40}\*/g, "")
     .replace(/#[\p{L}\p{N}_]+/gu, "")
     .replace(/[ \t]{2,}/g, " ")

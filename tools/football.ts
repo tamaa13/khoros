@@ -52,16 +52,24 @@ function line(f: Fixture): string {
 }
 
 /** Upcoming World Cup matches or recent results, as a short readable list. */
-export async function getFixtures(
+/** Structured upcoming fixtures or recent results — used by the commentator. */
+export async function listFixtures(
   when: "upcoming" | "recent" = "upcoming",
   limit = 6,
-): Promise<string> {
+): Promise<Fixture[]> {
   const path =
     when === "recent"
       ? `eventspastleague.php?id=${WC_LEAGUE_ID}`
       : `eventsnextleague.php?id=${WC_LEAGUE_ID}`;
+  return (await fetchEvents(path)).map(toFixture).slice(0, limit);
+}
+
+export async function getFixtures(
+  when: "upcoming" | "recent" = "upcoming",
+  limit = 6,
+): Promise<string> {
   try {
-    const fixtures = (await fetchEvents(path)).map(toFixture).slice(0, limit);
+    const fixtures = await listFixtures(when, limit);
     if (fixtures.length === 0) return `No ${when} World Cup matches found right now.`;
     const label = when === "recent" ? "Recent World Cup results" : "Upcoming World Cup matches";
     return `${label}:\n${fixtures.map((f) => `- ${line(f)}`).join("\n")}`;

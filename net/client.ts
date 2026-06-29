@@ -6,7 +6,7 @@
  */
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:crypto";
 
-export type Participant = "human" | "agent";
+export type Participant = "human" | "agent" | "commentator";
 
 export interface RoomMessage {
   room: string;

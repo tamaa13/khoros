@@ -20,6 +20,24 @@ export interface InitOptions {
   onStatus?: (status: string) => void;
 }
 
+export interface TurnOptions {
+  // Extract + remember a prediction from this message. Off for match commentary,
+  // which narrates outcomes rather than stating the speaker's own predictions.
+  learnPredictions?: boolean;
+}
+
+// A callback only makes sense when the new message actually reports an outcome —
+// not just because it mentions the same teams as an earlier prediction. The
+// score pattern excludes dates (the lookbehind/lookahead reject "2026-06-28").
+function reportsResult(text: string): boolean {
+  return (
+    /(?<![\d-])\d{1,2}\s*[-–]\s*\d{1,2}(?![\d-])/.test(text) ||
+    /\b(won|win|wins|winner|beat|beats|defeat|defeats|lost|menang|kalah|imbang|draw|full[ -]?time|final whistle|juara|champions?)\b/i.test(
+      text,
+    )
+  );
+}
+
 export class Agent {
   readonly memory: Memory;
   readonly brain: Brain;
@@ -43,15 +61,15 @@ export class Agent {
     }
   }
 
-  async turn(userText: string): Promise<TurnResult> {
+  async turn(userText: string, opts: TurnOptions = {}): Promise<TurnResult> {
     const recalled = await this.memory.recall(userText);
 
-    // The magic: if a recalled prediction is a strong match for what they just
-    // said, treat it as confirmed and have the agent call it back. Decided in
-    // code so it lands reliably instead of depending on the small model.
-    const confirmed = recalled.find(
-      (r) => r.entry.kind === "prediction" && r.score >= CALLBACK_MIN_SCORE,
-    );
+    // The magic: when this message reports an outcome that confirms a recalled
+    // prediction (strong match), have the agent call it back. Gated on a real
+    // result so it fires once on the news, not on every mention of the teams.
+    const confirmed = reportsResult(userText)
+      ? recalled.find((r) => r.entry.kind === "prediction" && r.score >= CALLBACK_MIN_SCORE)
+      : undefined;
 
     const tools: string[] = [];
     const reply = await this.brain.respond(userText, recalled, confirmed?.entry.text ?? null, (t) =>
@@ -59,8 +77,11 @@ export class Agent {
     );
 
     await this.memory.save(userText, "chat");
-    const prediction = await this.brain.extractPrediction(userText);
-    if (prediction) await this.memory.save(prediction, "prediction");
+    let prediction: string | null = null;
+    if (opts.learnPredictions ?? true) {
+      prediction = await this.brain.extractPrediction(userText);
+      if (prediction) await this.memory.save(prediction, "prediction");
+    }
 
     if (this.voice) await this.voice.speak(reply);
 
