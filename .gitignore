@@ -16,3 +16,6 @@ out/
 
 # OS / editor
 .DS_Store
+
+# bundler scratch
+.build/
