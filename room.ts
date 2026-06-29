@@ -7,8 +7,13 @@
  *   bun room.ts --name you --human                # 4) you, to nudge them
  *
  * Each agent needs its own memory: run with a distinct KHOROS_DATA per agent.
- * Agents react to humans always, and to other agents only when mentioned by
- * name — so they don't ping-pong forever.
+ * By default agents react to humans always, and to other agents only when
+ * mentioned by name — so they don't ping-pong forever.
+ *
+ * Lobby mode lets them converse on their own with no human in the loop, passing
+ * a baton (msg.next) so one speaks at a time. Give each the roster and a slant:
+ *   bun room.ts --name Rian --lobby --starter --peers Rian,Sari --bias "Die-hard Brazil fan."
+ *   bun room.ts --name Sari --lobby           --peers Rian,Sari --bias "Backs Argentina, loves data."
  */
 import "./quiet"; // before @qvac/sdk
 import { createInterface } from "node:readline";
@@ -43,34 +48,68 @@ if (asHuman) {
   }
   client.close();
 } else {
-  const agent = new Agent();
+  // Lobby mode: agents converse on their own, passing a baton (msg.next) so
+  // exactly one speaks at a time — round-robin, but a peer addressed by name
+  // gets the baton instead, which makes it feel like a real back-and-forth.
+  const lobby = process.argv.includes("--lobby");
+  const isStarter = process.argv.includes("--starter");
+  const peers = (arg("--peers") ?? NAME).split(",").map((s) => s.trim()).filter(Boolean);
+  const TURN_DELAY = Number(arg("--turn-delay", "3500"));
+  const MAX_TURNS = Number(arg("--max-turns", "0")); // 0 = until Ctrl+C
+  const KICKOFF =
+    arg("--topic") ??
+    "Lagi santai di lobby nih. Buka obrolan: siapa jagoan lo buat juara Piala Dunia 2026, dan kenapa?";
+
+  const agent = new Agent({ bias: arg("--bias") });
   status(`loading ${NAME}…`);
   await agent.init({ onStatus: status });
 
   const client = new RoomClient(RELAY, NAME, "agent");
   await client.connect();
 
-  // Serialize reactions: the model handles one inference at a time, so queue
-  // incoming messages rather than reacting concurrently.
-  const queue: RoomMessage[] = [];
-  let busy = false;
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const mentioned = (text: string) => new RegExp(`\\b${NAME}\\b`, "i").test(text);
+  const rrNext = (): string => {
+    const i = peers.indexOf(NAME);
+    return peers[(i + 1) % peers.length] ?? NAME;
+  };
+  // Hand the baton to a peer the reply addresses by name, else round-robin.
+  const pickNext = (reply: string): string => {
+    for (const p of peers) {
+      if (p !== NAME && new RegExp(`\\b${p}\\b`, "i").test(reply)) return p;
+    }
+    return rrNext();
+  };
 
-  async function drain() {
+  // Serialize reactions: the model handles one inference at a time, so queue
+  // incoming work rather than reacting concurrently. A null task is the kickoff.
+  type Task = RoomMessage | { kickoff: true };
+  const queue: Task[] = [];
+  let busy = false;
+  let turns = 0;
+
+  async function speak(stimulus: RoomMessage | null): Promise<void> {
+    if (lobby && TURN_DELAY) await sleep(TURN_DELAY); // pace so it's readable
+    const userText = stimulus ? `${stimulus.from}: ${stimulus.text}` : KICKOFF;
+    status(`${NAME} ${stimulus ? `reacting to ${stimulus.from}` : "opening the lobby"}…`);
+    const { reply, tools, callback } = await agent.turn(userText, {
+      learnPredictions: stimulus?.kind !== "commentator",
+    });
+    if (tools.length) status(`🔧 ${tools.join(", ")}`);
+    if (callback) status(`↩ called back: ${callback}`);
+    turns += 1;
+    const done = lobby && MAX_TURNS > 0 && turns >= MAX_TURNS;
+    client.post(reply, lobby && !done ? pickNext(reply) : undefined);
+    if (done) status(`${NAME} done after ${turns} turns — dropping the baton.`);
+  }
+
+  async function drain(): Promise<void> {
     if (busy) return;
     busy = true;
     while (queue.length) {
-      const m = queue.shift()!;
-      status(`${NAME} reacting to ${m.from}…`);
+      const t = queue.shift()!;
       try {
-        // Don't mine predictions from the commentator — it narrates outcomes,
-        // it isn't the speaker making a fresh prediction.
-        const { reply, tools, callback } = await agent.turn(`${m.from}: ${m.text}`, {
-          learnPredictions: m.kind !== "commentator",
-        });
-        if (tools.length) status(`🔧 ${tools.join(", ")}`);
-        if (callback) status(`↩ called back: ${callback}`);
-        client.post(reply);
+        await speak("kickoff" in t ? null : t);
       } catch (e: any) {
         status(`error: ${e?.message ?? e}`);
       }
@@ -81,16 +120,29 @@ if (asHuman) {
   client.onMessage((m) => {
     if (m.from === NAME) return;
     status(`saw ${m.from} [${m.kind}]: ${m.text.slice(0, 70)}`);
-    // React to humans and the match commentator always; to other agents only
-    // when mentioned by name (keeps them from talking in circles).
-    if (m.kind === "human" || m.kind === "commentator" || mentioned(m.text)) {
+    const take = lobby
+      ? // my baton, or — as the host — a human/commentator dropping in
+        m.next === NAME || (isStarter && (m.kind === "human" || m.kind === "commentator"))
+      : m.kind === "human" || m.kind === "commentator" || mentioned(m.text);
+    if (take) {
       queue.push(m);
       void drain();
     }
   });
 
   client.join(ROOM, PASS);
-  status(`${NAME} joined "${ROOM}". reacting to humans + mentions.`);
+  if (lobby) {
+    status(`${NAME} joined "${ROOM}" lobby [${peers.join(", ")}]${isStarter ? " — host" : ""}.`);
+    if (isStarter) {
+      // let peers subscribe before opening
+      setTimeout(() => {
+        queue.push({ kickoff: true });
+        void drain();
+      }, 1500);
+    }
+  } else {
+    status(`${NAME} joined "${ROOM}". reacting to humans + mentions.`);
+  }
 
   process.on("SIGINT", async () => {
     client.close();
