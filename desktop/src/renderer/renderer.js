@@ -6,8 +6,10 @@ const pillText = document.getElementById("pillText");
 const input = document.getElementById("input");
 const send = document.getElementById("send");
 const composer = document.getElementById("composer");
+const lobbyBtn = document.getElementById("lobbyBtn");
 
 let ready = false;
+let lobbyRunning = false;
 
 function scrollDown() {
   thread.scrollTop = thread.scrollHeight;
@@ -69,8 +71,88 @@ window.khoros.onReady(() => {
   pillText.textContent = "on-device · ready";
   input.disabled = false;
   send.disabled = false;
+  lobbyBtn.disabled = false;
   input.focus();
   addMessage("Halo! Lagi rame nih World Cup 2026. Jagoan lo siapa?", "agent");
+});
+
+// ---------- the lobby (multi-agent show) ----------
+const SPEAKERS = {
+  Dewi: { avatar: "🟢", cls: "spk-dewi" },
+  Rian: { avatar: "🔵", cls: "spk-rian" },
+  Commentator: { avatar: "🎙️", cls: "spk-commentator" },
+};
+
+function addSystem(text) {
+  const el = document.createElement("div");
+  el.className = "sys";
+  el.textContent = text;
+  thread.appendChild(el);
+  scrollDown();
+}
+
+function addLobbyMessage(m) {
+  if (m.kind === "system") return addSystem(m.text);
+  const spk = SPEAKERS[m.from] || { avatar: "⚽", cls: "" };
+  const row = document.createElement("div");
+  row.className = `row agent lobby ${spk.cls}`;
+
+  const av = document.createElement("div");
+  av.className = "avatar";
+  av.textContent = spk.avatar;
+  row.appendChild(av);
+
+  const col = document.createElement("div");
+  col.className = "col";
+  const name = document.createElement("div");
+  name.className = "name-label";
+  name.textContent = m.from;
+  const bubble = document.createElement("div");
+  bubble.className = `bubble ${m.kind === "commentator" ? "commentator" : ""}`;
+  const t = document.createElement("div");
+  t.textContent = m.text;
+  bubble.appendChild(t);
+  if (m.callback) {
+    const b = document.createElement("span");
+    b.className = "badge gold";
+    b.textContent = "↩ told you so";
+    bubble.appendChild(b);
+  }
+  col.appendChild(name);
+  col.appendChild(bubble);
+  row.appendChild(col);
+  thread.appendChild(row);
+  scrollDown();
+}
+
+window.khoros.onLobbyStatus((s) => {
+  if (lobbyRunning) lobbyBtn.textContent = s;
+});
+window.khoros.onLobbyMessage((m) => addLobbyMessage(m));
+
+lobbyBtn.addEventListener("click", async () => {
+  if (lobbyRunning || !ready) return;
+  lobbyRunning = true;
+  lobbyBtn.disabled = true;
+  input.disabled = true;
+  send.disabled = true;
+  addSystem("⚽ Lobby starting — two agents are about to argue, then the real result lands.");
+
+  let res;
+  try {
+    res = await window.khoros.startLobby();
+  } catch (err) {
+    res = { ok: false, error: err?.message ?? String(err) };
+  }
+  if (!res || !res.ok) addSystem(`lobby error: ${res?.error ?? "unknown"}`);
+  else addSystem("— that's the Khoros lobby: the agent who called it just took its victory lap. —");
+
+  lobbyBtn.textContent = "▶ Lobby";
+  lobbyBtn.disabled = false;
+  input.disabled = false;
+  send.disabled = false;
+  lobbyRunning = false;
+  input.focus();
 });
 
 composer.addEventListener("submit", async (e) => {
