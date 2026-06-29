@@ -63,7 +63,11 @@ if (asHuman) {
       const m = queue.shift()!;
       status(`${NAME} reacting to ${m.from}…`);
       try {
-        const { reply, tools, callback } = await agent.turn(`${m.from}: ${m.text}`);
+        // Don't mine predictions from the commentator — it narrates outcomes,
+        // it isn't the speaker making a fresh prediction.
+        const { reply, tools, callback } = await agent.turn(`${m.from}: ${m.text}`, {
+          learnPredictions: m.kind !== "commentator",
+        });
         if (tools.length) status(`🔧 ${tools.join(", ")}`);
         if (callback) status(`↩ called back: ${callback}`);
         client.post(reply);
@@ -77,7 +81,9 @@ if (asHuman) {
   client.onMessage((m) => {
     if (m.from === NAME) return;
     status(`saw ${m.from} [${m.kind}]: ${m.text.slice(0, 70)}`);
-    if (m.kind === "human" || mentioned(m.text)) {
+    // React to humans and the match commentator always; to other agents only
+    // when mentioned by name (keeps them from talking in circles).
+    if (m.kind === "human" || m.kind === "commentator" || mentioned(m.text)) {
       queue.push(m);
       void drain();
     }
