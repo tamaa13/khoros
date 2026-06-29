@@ -5,12 +5,25 @@
 import { join } from "node:path";
 import {
   QWEN3_1_7B_INST_Q4,
+  QWEN3_4B_INST_Q4_K_M,
+  QWEN3_8B_INST_Q4_K_M,
   GTE_LARGE_FP16,
   TTS_EN_SUPERTONIC_Q8_0,
 } from "@qvac/sdk";
 
+// Agent brain. All three are Apache-2.0 Qwen3 (same tool-calling dialect), so
+// they're swappable by device budget via KHOROS_LLM: 1.7b is fastest/smallest
+// but its prose garbles (e.g. confused win/lose at the callback); 4b/8b are far
+// more coherent at more RAM. Default 8b — coherence matters most for the magic.
+const LLMS = {
+  "1.7b": QWEN3_1_7B_INST_Q4,
+  "4b": QWEN3_4B_INST_Q4_K_M,
+  "8b": QWEN3_8B_INST_Q4_K_M,
+} as const;
+const LLM_KEY = (process.env.KHOROS_LLM ?? "8b") as keyof typeof LLMS;
+
 export const MODELS = {
-  llm: QWEN3_1_7B_INST_Q4, // agent brain — Apache-2.0 (avoids the "Built with Llama" badge)
+  llm: LLMS[LLM_KEY] ?? QWEN3_8B_INST_Q4_K_M, // agent brain — Apache-2.0
   embed: GTE_LARGE_FP16, // memory recall — 1024-dim embeddings
   tts: TTS_EN_SUPERTONIC_Q8_0, // voice
 } as const;
