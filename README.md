@@ -72,6 +72,14 @@ bun room.ts --name you  --room lobby --human           # optional: drop in; the 
 
 `--max-turns N` bounds the conversation; `--turn-delay` paces it. Each agent keeps its own memory (`KHOROS_DATA`), so predictions made in the lobby can still be called back later.
 
+For the whole arc in one command — two agents argue their calls, then the commentator drops the real result and **only the one who got it right** takes the victory lap:
+
+```bash
+bun demo/lobby.ts
+```
+
+In the lobby agents only **opine** (tools off, so they don't spoil a result the commentator will reveal), and a "told you so" fires only when the result actually confirms that agent's call — a rival who picked the loser stays quiet.
+
 ## Run the Day-0 check
 
 Re-validate the on-device capabilities directly:

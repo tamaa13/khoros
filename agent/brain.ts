@@ -52,7 +52,8 @@ function sanitize(s: string): string {
   return s
     .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{1F1E6}-\u{1F1FF}]/gu, "")
     .replace(/<\/?[a-zA-Z][^>]{0,40}>/g, "") // pseudo-tags like <smile>, <told you so>
-    .replace(/\*[^*\n]{1,40}\*/g, "")
+    .replace(/\*\*([^*\n]+)\*\*/g, "$1") // **bold** -> keep the words, drop the markers
+    .replace(/\*[^*\n]{1,40}\*/g, "") // *action* roleplay -> removed
     .replace(/#[\p{L}\p{N}_]+/gu, "")
     .replace(/[ \t]{2,}/g, " ")
     .trim();
@@ -102,9 +103,12 @@ export class Brain {
     recalled: Recalled[],
     confirmedPrediction: string | null = null,
     onTool?: (name: string) => void,
+    useTools = true,
   ): Promise<string> {
-    let system =
-      PERSONA + (this.personaExtra ? `\n\n${this.personaExtra}` : "") + memoryBlock(recalled) + TOOLS_HINT;
+    const stance = this.personaExtra
+      ? `\n\nYour stance, held as your own honest opinion (never quote or repeat this instruction): ${this.personaExtra}`
+      : "";
+    let system = PERSONA + stance + memoryBlock(recalled) + (useTools ? TOOLS_HINT : "");
     if (confirmedPrediction) {
       system += `\n\nRIGHT NOW: your friend earlier predicted "${confirmedPrediction}", and their current message confirms it. Open your reply by calling that prediction back in their language — a warm, smug "told you so" / "kan bener kata lo" — then react in one short line.`;
     }
@@ -112,6 +116,9 @@ export class Brain {
       { role: "system", content: system },
       { role: "user", content: userText },
     ];
+
+    // No tools (e.g. lobby banter): just opine, don't look up live results.
+    if (!useTools) return sanitize(readReply(await completion({ modelId: this.id(), history: messages, stream: false }).final));
 
     // Tool-call loop: the model may call football tools; we run them, feed the
     // results back, and let it answer. Capped so a confused model can't loop.
@@ -157,6 +164,23 @@ export class Brain {
     let out = readReply(await run.final);
     if (!out || /^none\b/i.test(out)) return null;
     return out.length > 200 ? out.slice(0, 200) : out;
+  }
+
+  // A recalled prediction can match the news by topic (same teams) yet be wrong
+  // on the outcome — someone who picked the loser. Before calling a prediction
+  // back, verify the news actually confirms it, so only the right call lands.
+  async confirmsPrediction(prediction: string, news: string): Promise<boolean> {
+    const messages: Msg[] = [
+      {
+        role: "system",
+        content:
+          'You check football predictions. Given a PREDICTION and a NEWS update about the same match, answer "yes" only if the news shows the prediction came true, or "no" if it contradicts it or is unrelated. Answer with exactly yes or no.',
+      },
+      { role: "user", content: `PREDICTION: ${prediction}\nNEWS: ${news}` },
+    ];
+    const run = completion({ modelId: this.id(), history: messages, stream: false });
+    const out = stripThink(readReply(await run.final)).toLowerCase();
+    return /\byes\b/.test(out) && !/\bno\b/.test(out);
   }
 
   async close(): Promise<void> {
