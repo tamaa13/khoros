@@ -46,9 +46,11 @@ What you get per OS (run `npm run make` **on that OS**):
 Forge plugin keeps only the build host's binaries — they can't cross-compile, and
 a macOS universal build isn't supported. (Tether ships its own Workbench the same
 way: separate `.dmg` / `.msix` / `.AppImage`.) So: make the Mac build on a Mac,
-the Windows build on a Windows machine, the Linux build on Linux — or use a CI
-matrix (GitHub Actions `runs-on: macos-latest / windows-latest / ubuntu-latest`)
-to produce all three from one push.
+the Windows build on a Windows machine, the Linux build on Linux — or let CI do
+all three for you. This repo ships
+[`.github/workflows/build-desktop.yml`](../.github/workflows/build-desktop.yml):
+trigger it from the **Actions tab → "Build desktop installers" → Run workflow**,
+or push a `v*` tag to also attach the `.dmg` / `.exe` / `.deb` to a GitHub Release.
 
 On Windows/Linux QVAC needs a **Vulkan-capable GPU** (CPU fallback works but is
 slow); macOS uses Metal. The model still downloads once on first run on every OS.
