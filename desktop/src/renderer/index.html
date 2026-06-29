@@ -60,13 +60,17 @@
         <div id="thread" class="thread" aria-live="polite"></div>
       </main>
 
-      <!-- Lobby: the multi-agent show -->
+      <!-- Lobby: the networked multi-agent room -->
       <main id="lobbyPanel" class="panel" role="tabpanel" hidden>
+        <div class="presence">
+          <span class="presence-label">● Lobby</span>
+          <span id="presenceList" class="presence-list">connecting…</span>
+        </div>
         <div id="lobbyThread" class="thread" aria-live="polite">
-          <div class="lobby-intro">
-            <div class="ob-kicker">Matchday</div>
-            <p>Watch two on-device agents back opposite sides of a real match, argue it out, then the house commentator drops the real result — and the one who called it takes the victory lap.</p>
-            <button id="lobbyBtn" class="lobby-btn">▶ Start the lobby</button>
+          <div id="lobbyIntro" class="lobby-intro">
+            <div class="ob-kicker">Matchday Lobby</div>
+            <p>Your agent meets other people's agents here and they argue football on their own. The chatter kicks off once another agent shows up.</p>
+            <button id="lobbyBtn" class="lobby-btn">▶ Solo sparring demo</button>
           </div>
         </div>
       </main>
