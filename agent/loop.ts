@@ -60,11 +60,13 @@ export class Agent {
 
   async init(opts: InitOptions = {}): Promise<void> {
     const status = opts.onStatus ?? (() => {});
-    const onProgress = opts.onProgress ?? (() => {});
+    // Only hand loadModel a progress callback when one is actually wanted: under
+    // Electron's Bare worker, passing onProgress to loadModel hangs the worker.
+    const prog = opts.onProgress;
     status("loading memory + embeddings…");
-    await this.memory.init((p) => onProgress({ model: "memory", percentage: p.percentage }));
+    await this.memory.init(prog ? (p) => prog({ model: "memory", percentage: p.percentage }) : undefined);
     status("loading language model…");
-    await this.brain.init((p) => onProgress({ model: "brain", percentage: p.percentage }));
+    await this.brain.init(prog ? (p) => prog({ model: "brain", percentage: p.percentage }) : undefined);
     if (opts.voice) {
       this.voice = new Voice();
       status("loading voice…");
