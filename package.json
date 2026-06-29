@@ -5,6 +5,8 @@
   "type": "module",
   "description": "A society of local QVAC agents around WC2026 (Tether Developers Cup).",
   "scripts": {
+    "start": "bun cli.ts",
+    "agent": "bun cli.ts",
     "day0": "bun day0/check.ts"
   },
   "dependencies": {
