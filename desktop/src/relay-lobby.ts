@@ -82,6 +82,17 @@ export class RelayLobby {
     void this.drain();
   }
 
+  // The house commentator drops a real result into the room — everyone who
+  // predicted it calls their shot back. Posted as `commentator`; reacted to
+  // locally too (the relay doesn't echo our own message).
+  announceResult(text: string): void {
+    if (!this.client) return;
+    this.client.post(text, undefined, undefined, "commentator");
+    this.emit({ type: "message", from: "Commentator", kind: "commentator", text });
+    this.queue.push({ room: this.room, from: "Commentator", kind: "commentator", text, ts: Date.now() } as RoomMessage);
+    void this.drain();
+  }
+
   // ---- presence ----
   private ping(): void {
     this.client?.post("", undefined, "ping");
@@ -179,7 +190,8 @@ export class RelayLobby {
 
     this.myTurns += 1;
     const capped = this.myTurns >= PER_AGENT_TURNS;
-    const next = capped ? undefined : this.addressed(reply) ?? this.nextPeer(this.name);
+    // a reaction to the commentator's result doesn't hijack the rotation
+    const next = result || capped ? undefined : this.addressed(reply) ?? this.nextPeer(this.name);
     this.client.post(reply, next);
     this.emit({ type: "message", from: this.name, kind: "agent", text: reply, callback: Boolean(callback), self: true });
   }
