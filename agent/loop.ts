@@ -18,6 +18,8 @@ export interface TurnResult {
 export interface InitOptions {
   voice?: boolean;
   onStatus?: (status: string) => void;
+  // Model-download progress (first run pulls ~GB). `model` names which one.
+  onProgress?: (p: { model: string; percentage?: number }) => void;
 }
 
 export interface TurnOptions {
@@ -58,15 +60,21 @@ export class Agent {
 
   async init(opts: InitOptions = {}): Promise<void> {
     const status = opts.onStatus ?? (() => {});
+    const onProgress = opts.onProgress ?? (() => {});
     status("loading memory + embeddings…");
-    await this.memory.init();
+    await this.memory.init((p) => onProgress({ model: "memory", percentage: p.percentage }));
     status("loading language model…");
-    await this.brain.init();
+    await this.brain.init((p) => onProgress({ model: "brain", percentage: p.percentage }));
     if (opts.voice) {
       this.voice = new Voice();
       status("loading voice…");
       await this.voice.init();
     }
+  }
+
+  // Set the agent's preferred reply language (from /language). Empty = English.
+  setLanguage(language: string | undefined): void {
+    this.brain.setLanguage(language);
   }
 
   async turn(userText: string, opts: TurnOptions = {}): Promise<TurnResult> {
