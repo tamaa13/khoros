@@ -2,23 +2,44 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;" />
     <title>Khoros</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header>
-      <div class="brand">Khoros</div>
-      <div class="tag">your World Cup watch-mate — on device</div>
+    <header class="topbar">
+      <div class="brand">
+        <span class="crest" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 4.5l2.4 1.7-.9 2.8h-3l-.9-2.8L12 4.5zM5.1 9.6l2.7.1.9 2.8-2.3 1.7-1.8-2.1.5-2.5zM18.9 9.6l.5 2.5-1.8 2.1-2.3-1.7.9-2.8 2.7-.1zM8.3 17.9l1.4-2.3h4.6l1.4 2.3-2.1 1.3h-3.2l-2.1-1.3z" fill="currentColor" stroke="none" />
+          </svg>
+        </span>
+        <div class="brand-text">
+          <div class="name">Khoros</div>
+          <div class="tag">your World Cup watch-mate</div>
+        </div>
+      </div>
+      <div id="pill" class="pill" title="Everything runs locally on your machine — no cloud, no account">
+        <span class="dot"></span><span id="pillText">on-device</span>
+      </div>
     </header>
 
-    <div id="status" class="status">starting…</div>
+    <main id="thread" aria-live="polite">
+      <div id="loader" class="loader">
+        <div class="spinner" aria-hidden="true"></div>
+        <div id="loaderText" class="loader-text">starting…</div>
+        <div class="loader-sub">no cloud · no account · your data never leaves this machine</div>
+      </div>
+    </main>
 
-    <main id="thread" aria-live="polite"></main>
-
-    <form id="composer" autocomplete="off">
+    <form id="composer" class="composer" autocomplete="off">
       <input id="input" type="text" placeholder="Talk about the World Cup…" disabled />
-      <button id="send" type="submit" disabled>Send</button>
+      <button id="send" type="submit" disabled aria-label="Send">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h13M12 6l6 6-6 6" />
+        </svg>
+      </button>
     </form>
 
     <script src="renderer.js"></script>

@@ -31,9 +31,31 @@ KHOROS_LLM=4b npm start
 ## Package a distributable
 
 ```bash
-npm run make       # -> out/make/… a .dmg / .zip for the current arch
+npm run make       # -> out/make/… an installer for the OS you run this on
 ```
 
-Build per architecture (`darwin-arm64` and `darwin-x64` separately) — QVAC's
-native prebuilds are arch-specific, so a macOS universal build isn't supported.
-See [../PACKAGING.md](../PACKAGING.md) for the full distribution picture.
+What you get per OS (run `npm run make` **on that OS**):
+
+| Build host | Output | Requirement to run |
+|---|---|---|
+| **macOS** (Apple Silicon / Intel) | `.dmg` + `.zip` | — |
+| **Windows** (x64) | `Khoros-Setup.exe` (Squirrel) + `.zip` | Vulkan-capable GPU |
+| **Linux** (x64) | `.deb` + `.zip` | Vulkan-capable GPU |
+
+**You must build on each OS.** QVAC's native addons are per-OS/per-arch and the
+Forge plugin keeps only the build host's binaries — they can't cross-compile, and
+a macOS universal build isn't supported. (Tether ships its own Workbench the same
+way: separate `.dmg` / `.msix` / `.AppImage`.) So: make the Mac build on a Mac,
+the Windows build on a Windows machine, the Linux build on Linux — or let CI do
+all three for you. This repo ships
+[`.github/workflows/build-desktop.yml`](../.github/workflows/build-desktop.yml):
+trigger it from the **Actions tab → "Build desktop installers" → Run workflow**,
+or push a `v*` tag to also attach the `.dmg` / `.exe` / `.deb` to a GitHub Release.
+
+On Windows/Linux QVAC needs a **Vulkan-capable GPU** (CPU fallback works but is
+slow); macOS uses Metal. The model still downloads once on first run on every OS.
+
+Unsigned builds will warn on first open (macOS Gatekeeper / Windows SmartScreen) —
+right-click → Open (mac) or "More info → Run anyway" (Windows). Code-signing +
+notarization removes that but needs paid developer certs; not required for sharing
+with technical users. See [../PACKAGING.md](../PACKAGING.md) for the full picture.
