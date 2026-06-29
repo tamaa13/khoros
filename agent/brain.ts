@@ -82,6 +82,13 @@ export class Brain {
   // Brazil fan") appended to the shared base persona.
   constructor(private readonly personaExtra?: string) {}
 
+  // Preferred reply language (default English via the persona). Set by the user
+  // through /language; empty/undefined keeps the English default.
+  private language?: string;
+  setLanguage(language: string | undefined): void {
+    this.language = language && language.trim() ? language.trim() : undefined;
+  }
+
   async init(onProgress?: (p: { percentage?: number }) => void): Promise<void> {
     this.modelId = await loadModel({
       modelSrc: MODELS.llm,
@@ -110,11 +117,19 @@ export class Brain {
       : "";
     let system = PERSONA + stance + memoryBlock(recalled) + (useTools ? TOOLS_HINT : "");
     if (confirmedPrediction) {
-      system += `\n\nRIGHT NOW: your friend earlier predicted "${confirmedPrediction}", and their current message confirms it. Open your reply by calling that prediction back in their language — a warm, smug "told you so" / "kan bener kata lo" — then react in one short line.`;
+      system += `\n\nRIGHT NOW: your friend earlier predicted "${confirmedPrediction}", and their current message confirms it. Open your reply by calling that prediction back — a warm, smug "told you so" — then react in one short line.`;
     }
+    // Language directive last (recency) and emphatic — small models otherwise
+    // default back to the message's language or the persona's English.
+    if (this.language) {
+      system += `\n\nIMPORTANT: write your ENTIRE reply in ${this.language}, no matter what language the user wrote in.`;
+    }
+    // Small models obey a language instruction far better when it sits right on
+    // the message they generate from, not only in the system prompt.
+    const userMsg = this.language ? `${userText}\n\n[Reply in ${this.language}.]` : userText;
     const messages: Msg[] = [
       { role: "system", content: system },
-      { role: "user", content: userText },
+      { role: "user", content: userMsg },
     ];
 
     // No tools (e.g. lobby banter): just opine, don't look up live results.

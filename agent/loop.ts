@@ -18,6 +18,8 @@ export interface TurnResult {
 export interface InitOptions {
   voice?: boolean;
   onStatus?: (status: string) => void;
+  // Model-download progress (first run pulls ~GB). `model` names which one.
+  onProgress?: (p: { model: string; percentage?: number }) => void;
 }
 
 export interface TurnOptions {
@@ -58,15 +60,23 @@ export class Agent {
 
   async init(opts: InitOptions = {}): Promise<void> {
     const status = opts.onStatus ?? (() => {});
+    // Only hand loadModel a progress callback when one is actually wanted: under
+    // Electron's Bare worker, passing onProgress to loadModel hangs the worker.
+    const prog = opts.onProgress;
     status("loading memory + embeddings…");
-    await this.memory.init();
+    await this.memory.init(prog ? (p) => prog({ model: "memory", percentage: p.percentage }) : undefined);
     status("loading language model…");
-    await this.brain.init();
+    await this.brain.init(prog ? (p) => prog({ model: "brain", percentage: p.percentage }) : undefined);
     if (opts.voice) {
       this.voice = new Voice();
       status("loading voice…");
       await this.voice.init();
     }
+  }
+
+  // Set the agent's preferred reply language (from /language). Empty = English.
+  setLanguage(language: string | undefined): void {
+    this.brain.setLanguage(language);
   }
 
   async turn(userText: string, opts: TurnOptions = {}): Promise<TurnResult> {
