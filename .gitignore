@@ -10,5 +10,9 @@ day0/artifacts/
 # Persisted agent memory (per-user, not for the repo)
 data/
 
+# Build artifacts (compiled binaries, packaged apps)
+dist/
+out/
+
 # OS / editor
 .DS_Store
