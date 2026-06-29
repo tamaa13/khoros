@@ -11,7 +11,7 @@
     "make": "npm run build && electron-forge make"
   },
   "dependencies": {
-    "@qvac/sdk": "0.13.5",
+    "@qvac/sdk": "0.14.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
