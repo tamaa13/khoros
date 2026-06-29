@@ -52,7 +52,10 @@ mkdirSync(DATADIR, { recursive: true });
 
 const kids: ChildProcess[] = [];
 function launch(name: string, args: string[], env: Record<string, string> = {}): ChildProcess {
-  const fd = openSync(join(LOGDIR, `${name}.log`), "a");
+  // Truncate, not append: waitFor() scans these logs for readiness markers, and
+  // stale "listening"/"joined" lines from a prior run would race us ahead of the
+  // process actually being up.
+  const fd = openSync(join(LOGDIR, `${name}.log`), "w");
   const child = spawn("bun", args, {
     cwd: ROOT,
     env: { ...process.env, ...env },
@@ -96,7 +99,7 @@ beat("starting the E2E-encrypted relay…");
 launch("relay", ["net/relay.ts"]);
 await waitFor("relay.log", "listening");
 
-beat("waking agent Rian — Qwen3 1.7B loading on-device…");
+beat(`waking agent Rian — on-device LLM (${process.env.KHOROS_LLM ?? "8b"}) loading…`);
 launch("rian", ["room.ts", "--name", "Rian"], { KHOROS_DATA: DATADIR });
 await waitFor("rian.log", "joined");
 
