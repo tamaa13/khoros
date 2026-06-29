@@ -59,6 +59,26 @@ app.whenReady().then(async () => {
     }
   });
 
+  // The lobby: several agents debate in-process and the right one calls its shot
+  // back. Streams each message to the renderer; runs one at a time.
+  const { Lobby } = await import("./lobby");
+  let lobbyBusy = false;
+  ipcMain.handle("lobby:start", async () => {
+    if (lobbyBusy) return { ok: false, error: "lobby already running" };
+    lobbyBusy = true;
+    const lobby = new Lobby(join(app.getPath("userData"), "lobby"));
+    try {
+      await lobby.init((s: string) => send("lobby:status", s));
+      await lobby.run((m) => send("lobby:message", m));
+      return { ok: true };
+    } catch (e: any) {
+      return { ok: false, error: String(e?.message ?? e) };
+    } finally {
+      await lobby.close().catch(() => {});
+      lobbyBusy = false;
+    }
+  });
+
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });

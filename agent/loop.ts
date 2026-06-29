@@ -49,8 +49,10 @@ export class Agent {
   readonly brain: Brain;
   private voice?: Voice;
 
-  constructor(opts: { bias?: string } = {}) {
-    this.memory = new Memory(MEMORY_FILE);
+  constructor(opts: { bias?: string; memoryFile?: string } = {}) {
+    // memoryFile lets several agents run in one process with isolated memory
+    // (the lobby) instead of all sharing the default store.
+    this.memory = new Memory(opts.memoryFile ?? MEMORY_FILE);
     this.brain = new Brain(opts.bias);
   }
 
