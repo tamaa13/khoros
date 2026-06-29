@@ -77,6 +77,10 @@ function memoryBlock(recalled: Recalled[]): string {
 export class Brain {
   private modelId?: string;
 
+  // personaExtra lets a lobby agent carry a distinct slant (e.g. "die-hard
+  // Brazil fan") appended to the shared base persona.
+  constructor(private readonly personaExtra?: string) {}
+
   async init(onProgress?: (p: { percentage?: number }) => void): Promise<void> {
     this.modelId = await loadModel({
       modelSrc: MODELS.llm,
@@ -99,7 +103,8 @@ export class Brain {
     confirmedPrediction: string | null = null,
     onTool?: (name: string) => void,
   ): Promise<string> {
-    let system = PERSONA + memoryBlock(recalled) + TOOLS_HINT;
+    let system =
+      PERSONA + (this.personaExtra ? `\n\n${this.personaExtra}` : "") + memoryBlock(recalled) + TOOLS_HINT;
     if (confirmedPrediction) {
       system += `\n\nRIGHT NOW: your friend earlier predicted "${confirmedPrediction}", and their current message confirms it. Open your reply by calling that prediction back in their language — a warm, smug "told you so" / "kan bener kata lo" — then react in one short line.`;
     }
