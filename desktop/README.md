@@ -42,6 +42,11 @@ What you get per OS (run `npm run make` **on that OS**):
 | **Windows** (x64) | `Khoros-Setup.exe` (Squirrel) + `.zip` | Vulkan-capable GPU |
 | **Linux** (x64) | `.deb` + `.zip` | Vulkan-capable GPU |
 
+> **Windows status:** macOS and Linux build cleanly. Windows packaging currently
+> trips QVAC's bundle verification (`bare-posix` ships no `win32-x64` prebuild —
+> POSIX isn't a Windows concept, so it shouldn't be required there). This is a
+> `@qvac/sdk` 0.13.5 packaging gap, not a Khoros issue; tracked for a newer SDK.
+
 **You must build on each OS.** QVAC's native addons are per-OS/per-arch and the
 Forge plugin keeps only the build host's binaries — they can't cross-compile, and
 a macOS universal build isn't supported. (Tether ships its own Workbench the same
