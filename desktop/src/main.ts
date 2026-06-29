@@ -87,6 +87,7 @@ app.whenReady().then(async () => {
     if ("language" in patch) agent.setLanguage(settings.language);
     persist();
     refreshReady(); // so a reload after naming/lang-change reflects it
+    if ("agentName" in patch) void connectLobby(); // join the relay lobby once named
     return { ...settings };
   });
 
@@ -119,11 +120,33 @@ app.whenReady().then(async () => {
     }
   });
 
+  // ---- networked lobby: this agent joins a relay room and converses with
+  // agents on OTHER machines/accounts. Connects once the agent has a name.
+  const { RelayLobby } = await import("./relay-lobby");
+  const RELAY_URL = process.env.KHOROS_RELAY ?? "ws://localhost:8787";
+  const LOBBY_ROOM = process.env.KHOROS_ROOM ?? "lobby";
+  const LOBBY_PASS = process.env.KHOROS_ROOM_PASS ?? "worldcup2026";
+  const LOBBY_TOPIC = "World Cup 2026 is heating up — who's your pick to win it all, and why?";
+  let relayLobby: any = null;
+  async function connectLobby(): Promise<void> {
+    if (relayLobby || !settings.agentName) return;
+    const lobby = new RelayLobby(agent, settings.agentName, RELAY_URL, LOBBY_ROOM, LOBBY_PASS, LOBBY_TOPIC, (e: unknown) => send("lobby:event", e));
+    relayLobby = lobby;
+    try {
+      await lobby.connect();
+    } catch (e: any) {
+      relayLobby = null;
+      send("lobby:event", { type: "status", text: "lobby offline — relay unreachable" });
+    }
+  }
+  void connectLobby(); // if already named, join now
+
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 
   app.on("window-all-closed", async () => {
+    relayLobby?.close?.();
     await agent.close().catch(() => {});
     if (process.platform !== "darwin") app.quit();
   });

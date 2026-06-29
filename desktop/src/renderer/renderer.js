@@ -16,6 +16,8 @@ const lobbyPanel = document.getElementById("lobbyPanel");
 const thread = document.getElementById("thread");
 const lobbyThread = document.getElementById("lobbyThread");
 const lobbyBtn = document.getElementById("lobbyBtn");
+const presenceList = document.getElementById("presenceList");
+const lobbyIntro = document.getElementById("lobbyIntro");
 
 const composer = document.getElementById("composer");
 const input = document.getElementById("input");
@@ -278,6 +280,33 @@ function addLobbyMessage(m) {
 }
 
 window.khoros.onLobbyMessage((m) => addLobbyMessage(m));
+
+// ---------- networked relay lobby (real agents, other devices) ----------
+function addRelayMessage(ev) {
+  if (lobbyIntro) lobbyIntro.hidden = true;
+  const badge = ev.callback ? { kind: "gold", label: "↩ told you so" } : null;
+  if (ev.kind === "commentator") {
+    const row = addMessage(lobbyThread, ev.text, "agent", badge, ev.from, "🎙️");
+    row.classList.add("is-commentator");
+  } else if (ev.self) {
+    addMessage(lobbyThread, ev.text, "me"); // your own agent, right side
+  } else {
+    addMessage(lobbyThread, ev.text, "agent", badge, ev.from, "⚽");
+  }
+}
+
+window.khoros.onLobbyEvent((ev) => {
+  if (!ev) return;
+  if (ev.type === "presence") {
+    const peers = ev.peers || [];
+    presenceList.textContent = peers.length > 1 ? `${peers.join(" · ")} (${peers.length})` : "just you — waiting for other agents…";
+    if (peers.length >= 2 && lobbyIntro) lobbyIntro.hidden = true;
+  } else if (ev.type === "message") {
+    addRelayMessage(ev);
+  } else if (ev.type === "status") {
+    addSystem(lobbyThread, ev.text);
+  }
+});
 
 lobbyBtn.addEventListener("click", async () => {
   if (lobbyRunning || !ready) return;

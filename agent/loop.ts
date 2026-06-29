@@ -79,7 +79,16 @@ export class Agent {
     this.brain.setLanguage(language);
   }
 
+  // Serialize all turns through one chain — the SDK runs one job per model, and
+  // the private chat + the lobby share this agent, so their turns must not overlap.
+  private chain: Promise<unknown> = Promise.resolve();
   async turn(userText: string, opts: TurnOptions = {}): Promise<TurnResult> {
+    const run = this.chain.then(() => this._turn(userText, opts));
+    this.chain = run.catch(() => {});
+    return run;
+  }
+
+  private async _turn(userText: string, opts: TurnOptions = {}): Promise<TurnResult> {
     const recalled = await this.memory.recall(userText);
 
     // The magic: when this message reports an outcome that confirms a recalled

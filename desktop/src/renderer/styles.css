@@ -202,6 +202,16 @@ body {
 .row.spk-rian .bubble { border-color: rgba(90, 169, 255, 0.35); }
 .row.is-commentator .bubble { background: rgba(245, 196, 81, 0.08); border: 1px solid rgba(245, 196, 81, 0.34); }
 
+/* lobby presence bar */
+.presence {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 16px; font-size: 12px;
+  background: rgba(6, 16, 13, 0.45);
+  border-bottom: 1px solid var(--line);
+}
+.presence-label { font-size: 10.5px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; }
+.presence-list { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 /* lobby intro */
 .lobby-intro { margin: auto; max-width: 300px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px; }
 .lobby-intro .ob-kicker { font-size: 11px; font-weight: 800; color: var(--accent); }

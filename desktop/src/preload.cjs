@@ -13,8 +13,10 @@ contextBridge.exposeInMainWorld("khoros", {
   memories: () => ipcRenderer.invoke("memories"),
   recall: (q) => ipcRenderer.invoke("recall", q),
   schedule: (when) => ipcRenderer.invoke("schedule", when),
-  // lobby: the multi-agent show
+  // in-process sparring demo (solo)
   startLobby: () => ipcRenderer.invoke("lobby:start"),
   onLobbyStatus: (cb) => ipcRenderer.on("lobby:status", (_e, s) => cb(s)),
   onLobbyMessage: (cb) => ipcRenderer.on("lobby:message", (_e, m) => cb(m)),
+  // networked relay lobby (real agents, other devices)
+  onLobbyEvent: (cb) => ipcRenderer.on("lobby:event", (_e, ev) => cb(ev)),
 });
