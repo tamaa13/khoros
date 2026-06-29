@@ -63,7 +63,7 @@ app.whenReady().then(async () => {
   // Import the agent core after env + app are ready (and lazily, so the model
   // load doesn't block window creation).
   const { Agent } = await import("../../agent/loop");
-  const { getFixtures } = await import("../../tools/football");
+  const { getFixtures, todayMatches, lastDecidedMatch } = await import("../../tools/football");
   const agent = new Agent();
 
   send("status", "loading the on-device model… (first run downloads it once)");
@@ -107,6 +107,21 @@ app.whenReady().then(async () => {
     (await agent.memory.recall(q)).map((r) => ({ kind: r.entry.kind, text: r.entry.text, score: r.score })),
   );
   ipcMain.handle("schedule", (_e, when: "upcoming" | "recent" = "upcoming") => getFixtures(when));
+
+  // Lobby room list: today's matches + the Replay Room pick (from the real schedule).
+  ipcMain.handle("matches:list", async () => {
+    const [today, replay] = await Promise.all([todayMatches(), lastDecidedMatch()]);
+    const label = (f: any) => `${f.home} v ${f.away}`;
+    return {
+      today: today.map((f: any) => ({ id: f.id ?? `${f.home}-${f.away}`, label: label(f), played: f.homeScore !== null })),
+      replay: replay ? { label: `${replay.home} ${replay.homeScore}-${replay.awayScore} ${replay.away}` } : null,
+    };
+  });
+  // The user picks a match → their agent opens a debate on it in the lobby.
+  ipcMain.handle("lobby:debate", (_e, matchLabel: string) => {
+    relayLobby?.kickoffTopic?.(`${matchLabel} — who wins, and why?`);
+    return { ok: Boolean(relayLobby) };
+  });
 
   // The lobby: several agents debate in-process and the right one calls its shot
   // back. Streams each message to the renderer; runs one at a time.

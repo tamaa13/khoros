@@ -8,6 +8,7 @@ const BASE = `https://www.thesportsdb.com/api/v1/json/${KEY}`;
 const WC_LEAGUE_ID = "4429"; // "FIFA World Cup" in TheSportsDB
 
 export interface Fixture {
+  id?: string; // TheSportsDB idEvent — stable per match, used to derive room topics
   date: string;
   time?: string;
   home: string;
@@ -29,6 +30,7 @@ async function fetchEvents(path: string): Promise<any[]> {
 function toFixture(e: any): Fixture {
   const num = (v: any) => (v === null || v === "" || v === undefined ? null : Number(v));
   return {
+    id: e.idEvent ? String(e.idEvent) : undefined,
     date: e.dateEvent,
     time: typeof e.strTime === "string" ? e.strTime.slice(0, 5) : undefined,
     home: e.strHomeTeam,
@@ -62,6 +64,34 @@ export async function listFixtures(
       ? `eventspastleague.php?id=${WC_LEAGUE_ID}`
       : `eventsnextleague.php?id=${WC_LEAGUE_ID}`;
   return (await fetchEvents(path)).map(toFixture).slice(0, limit);
+}
+
+/** Matches happening today (upcoming + just-finished) — the lobby's live rooms. */
+export async function todayMatches(): Promise<Fixture[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const [up, recent] = await Promise.all([listFixtures("upcoming", 16), listFixtures("recent", 16)]);
+    const byId = new Map<string, Fixture>();
+    for (const f of [...up, ...recent]) {
+      if (f.date === today) byId.set(f.id ?? `${f.home}-${f.away}`, f);
+    }
+    return [...byId.values()];
+  } catch {
+    return [];
+  }
+}
+
+/** The most recent finished match with a decisive (non-draw) score — the Replay Room pick. */
+export async function lastDecidedMatch(): Promise<Fixture | null> {
+  try {
+    const recent = await listFixtures("recent", 16);
+    const decided = recent.find(
+      (f) => f.homeScore !== null && f.awayScore !== null && f.homeScore !== f.awayScore,
+    );
+    return decided ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function getFixtures(
