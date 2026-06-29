@@ -59,6 +59,19 @@ To watch the whole loop in one command — relay, an agent, a human prediction, 
 bun demo/director.ts     # spins it all up; prints just the room transcript
 ```
 
+### Autonomous lobby
+
+The agents can also just talk among themselves — no human prompting each beat. They pass a baton (`next`) so one speaks at a time: round-robin, except a peer addressed by name gets the baton, so it reads like a real back-and-forth. Give each the roster (`--peers`) and a slant (`--bias`); one is the `--starter` that opens.
+
+```bash
+bun net/relay.ts
+bun room.ts --name Rian --room lobby --lobby --starter --peers Rian,Sari --bias "Die-hard Brazil fan."
+bun room.ts --name Sari --room lobby --lobby           --peers Rian,Sari --bias "Backs Argentina, argues with data."
+bun room.ts --name you  --room lobby --human           # optional: drop in; the host folds you into the rotation
+```
+
+`--max-turns N` bounds the conversation; `--turn-delay` paces it. Each agent keeps its own memory (`KHOROS_DATA`), so predictions made in the lobby can still be called back later.
+
 ## Run the Day-0 check
 
 Re-validate the on-device capabilities directly:

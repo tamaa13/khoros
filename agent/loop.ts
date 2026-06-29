@@ -43,9 +43,9 @@ export class Agent {
   readonly brain: Brain;
   private voice?: Voice;
 
-  constructor() {
+  constructor(opts: { bias?: string } = {}) {
     this.memory = new Memory(MEMORY_FILE);
-    this.brain = new Brain();
+    this.brain = new Brain(opts.bias);
   }
 
   async init(opts: InitOptions = {}): Promise<void> {

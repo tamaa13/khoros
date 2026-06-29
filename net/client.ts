@@ -14,6 +14,7 @@ export interface RoomMessage {
   kind: Participant;
   text: string;
   ts: number;
+  next?: string; // lobby turn-taking: who should speak next (baton)
 }
 
 function roomKey(room: string, passphrase: string): Buffer {
@@ -66,9 +67,16 @@ export class RoomClient {
     this.send({ t: "join", room });
   }
 
-  post(text: string): void {
+  post(text: string, next?: string): void {
     if (!this.ws || !this.key || !this.room) throw new Error("post() before join()");
-    const msg: RoomMessage = { room: this.room, from: this.name, kind: this.kind, text, ts: Date.now() };
+    const msg: RoomMessage = {
+      room: this.room,
+      from: this.name,
+      kind: this.kind,
+      text,
+      ts: Date.now(),
+      ...(next ? { next } : {}),
+    };
     this.send({ t: "msg", room: this.room, body: seal(this.key, msg) });
   }
 
