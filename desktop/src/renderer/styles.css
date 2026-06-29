@@ -212,6 +212,23 @@ body {
 .presence-label { font-size: 10.5px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; }
 .presence-list { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* lobby match strip (today's matches from the schedule) */
+.match-strip { display: flex; gap: 7px; padding: 8px 14px; overflow-x: auto; border-bottom: 1px solid var(--line); }
+.match-strip::-webkit-scrollbar { height: 0; }
+.match-chip {
+  -webkit-app-region: no-drag; flex-shrink: 0; white-space: nowrap;
+  padding: 5px 11px; font-size: 11.5px; font-weight: 600;
+  border-radius: 999px; cursor: pointer; font-family: var(--font);
+  background: #11201a; color: var(--text); border: 1px solid var(--line-2);
+  transition: transform 0.1s, border-color 0.15s;
+}
+.match-chip:hover { transform: translateY(-1px); border-color: var(--accent); }
+.match-chip.live { border-color: rgba(47, 210, 126, 0.4); }
+.match-chip.live::before { content: "● "; color: var(--accent); }
+.match-chip.played { color: var(--muted); }
+.match-chip.replay { color: var(--gold); border-color: rgba(245, 196, 81, 0.35); }
+.match-chip.muted { color: var(--muted); cursor: default; }
+
 /* lobby intro */
 .lobby-intro { margin: auto; max-width: 300px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px; }
 .lobby-intro .ob-kicker { font-size: 11px; font-weight: 800; color: var(--accent); }

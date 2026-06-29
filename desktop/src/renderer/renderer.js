@@ -18,6 +18,7 @@ const lobbyThread = document.getElementById("lobbyThread");
 const lobbyBtn = document.getElementById("lobbyBtn");
 const presenceList = document.getElementById("presenceList");
 const lobbyIntro = document.getElementById("lobbyIntro");
+const matchStrip = document.getElementById("matchStrip");
 
 const composer = document.getElementById("composer");
 const input = document.getElementById("input");
@@ -75,6 +76,10 @@ function switchTab(which) {
   agentPanel.hidden = !agent;
   lobbyPanel.hidden = agent;
   composer.style.visibility = agent ? "visible" : "hidden";
+  if (!agent && !matchesLoaded) {
+    matchesLoaded = true;
+    loadMatches();
+  }
 }
 tabAgent.addEventListener("click", () => switchTab("agent"));
 tabLobby.addEventListener("click", () => switchTab("lobby"));
@@ -292,6 +297,38 @@ function addRelayMessage(ev) {
     addMessage(lobbyThread, ev.text, "me"); // your own agent, right side
   } else {
     addMessage(lobbyThread, ev.text, "agent", badge, ev.from, "⚽");
+  }
+}
+
+// today's matches (from the real schedule) → tap one to make your agent debate it
+let matchesLoaded = false;
+async function loadMatches() {
+  if (!matchStrip) return;
+  let data;
+  try {
+    data = await window.khoros.matches();
+  } catch {
+    return;
+  }
+  matchStrip.innerHTML = "";
+  const chip = (label, cls, onClick) => {
+    const b = document.createElement("button");
+    b.className = `match-chip ${cls || ""}`;
+    b.textContent = label;
+    b.addEventListener("click", onClick);
+    matchStrip.appendChild(b);
+  };
+  const today = (data && data.today) || [];
+  if (!today.length) chip("No matches today — chat in the lobby", "muted", () => {});
+  for (const m of today) {
+    chip(m.label, m.played ? "played" : "live", async () => {
+      await window.khoros.debate(m.label);
+      if (lobbyIntro) lobbyIntro.hidden = true;
+      addSystem(lobbyThread, `Your agent opened a debate: ${m.label}.`);
+    });
+  }
+  if (data && data.replay) {
+    chip(`▦ Replay · ${data.replay.label}`, "replay", () => lobbyBtn.click());
   }
 }
 

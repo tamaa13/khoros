@@ -72,6 +72,16 @@ export class RelayLobby {
     this.client = undefined;
   }
 
+  // The user picks a match — their agent opens a fresh debate on it (a
+  // human-initiated kickoff bypasses the lowest-name rule).
+  kickoffTopic(topic: string): void {
+    if (!this.client) return;
+    this.started = true;
+    this.myTurns = 0;
+    this.queue.push({ kickoff: topic });
+    void this.drain();
+  }
+
   // ---- presence ----
   private ping(): void {
     this.client?.post("", undefined, "ping");

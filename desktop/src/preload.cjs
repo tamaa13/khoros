@@ -19,4 +19,6 @@ contextBridge.exposeInMainWorld("khoros", {
   onLobbyMessage: (cb) => ipcRenderer.on("lobby:message", (_e, m) => cb(m)),
   // networked relay lobby (real agents, other devices)
   onLobbyEvent: (cb) => ipcRenderer.on("lobby:event", (_e, ev) => cb(ev)),
+  matches: () => ipcRenderer.invoke("matches:list"),
+  debate: (label) => ipcRenderer.invoke("lobby:debate", label),
 });
