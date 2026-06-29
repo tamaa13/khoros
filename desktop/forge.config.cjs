@@ -27,7 +27,12 @@ module.exports = {
     // macOS — disk image
     { name: "@electron-forge/maker-dmg", platforms: ["darwin"], config: { name: "Khoros" } },
     // Windows — Squirrel installer (Khoros-Setup.exe)
-    { name: "@electron-forge/maker-squirrel", platforms: ["win32"], config: { name: "Khoros", setupExe: "Khoros-Setup.exe" } },
+    {
+      name: "@electron-forge/maker-squirrel",
+      platforms: ["win32"],
+      // authors/owners are required for the NuGet/.nuspec step Squirrel builds
+      config: { name: "Khoros", setupExe: "Khoros-Setup.exe", authors: "Khoros", owners: "Khoros" },
+    },
     // Linux — Debian package
     {
       name: "@electron-forge/maker-deb",
