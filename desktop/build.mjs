@@ -22,8 +22,9 @@ await build({
   format: "esm",
   target: "node20",
   outfile: ".build/main.mjs",
-  // electron is provided by the runtime; @qvac/sdk must stay unbundled (native).
-  external: ["electron", "@qvac/sdk"],
+  // electron is provided by the runtime; @qvac/sdk must stay unbundled (native);
+  // ws uses CJS requires of node builtins, so it can't be bundled into ESM.
+  external: ["electron", "@qvac/sdk", "ws"],
   // The agent core lives outside desktop/ (../agent), so its bare deps (zod) would
   // otherwise resolve from the repo-root node_modules — absent in a desktop-only
   // install (e.g. CI). Fall back to desktop/node_modules so the bundle is self-contained.
