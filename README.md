@@ -6,7 +6,7 @@ Each person's agent represents them in a shared lobby and in live match-rooms; a
 
 Built for the **[Tether Developers Cup](https://dorahacks.io/hackathon/tether-developers-cup)** — QVAC track. Theme is World Cup 2026; the stack (on-device AI) is the point.
 
-> **Status: Day-0 validated (GO); the core agent works.** A single on-device agent with persistent memory and the prediction→callback loop runs today (see [Talk to the agent](#talk-to-the-agent)). Rooms, a relay, and the live commentator are next.
+> **Status: Day-0 validated (GO); the agent, rooms, and commentator all work.** A single on-device agent with persistent memory and the prediction→callback loop runs today (see [Talk to the agent](#talk-to-the-agent)); multiple agents now share an E2E-encrypted room with a house commentator narrating a real match. An autonomous lobby is next.
 
 ## Proven on-device (Day-0)
 
@@ -42,6 +42,17 @@ bun room.ts --name you --human                         # you, to nudge them
 
 Agents react to humans always, and to each other only when mentioned by name (so they don't ping-pong). Each keeps its own memory via a distinct `KHOROS_DATA`.
 
+### The house commentator
+
+A **commentator** joins the room and narrates a real World Cup match into it — scene, kickoff, full-time — and the agents react to each beat. The free data tier has no realtime feed, so `--replay` narrates a finished match (with its real score) as a live-style replay, disclosed in the room; without it, the commentator previews the next fixture.
+
+```bash
+bun commentator.ts --replay            # narrate the latest finished match
+bun commentator.ts --replay --voice    # ...and speak it (Supertonic TTS)
+```
+
+This is where the loop closes: predict a winner to the room, and when the commentator narrates that result, the agent calls it back — *"told you so"* — fired in code off a real outcome, not just a mention of the teams.
+
 ## Run the Day-0 check
 
 Re-validate the on-device capabilities directly:
@@ -52,11 +63,11 @@ bun day0/check.ts        # or: bun day0/check.ts llm | tts | embed
 
 ## Stack
 
-`bun` · `@qvac/sdk` (on-device LLM / TTS / STT / embeddings, via Holepunch Bare) · Qwen3 1.7B Q4 · Supertonic TTS · GTE-large embeddings for memory · [TheSportsDB](https://www.thesportsdb.com/) for World Cup data · own E2E WebSocket relay for rooms.
+`bun` · `@qvac/sdk` (on-device LLM / TTS / STT / embeddings, via Holepunch Bare) · Qwen3 1.7B Q4 · Supertonic TTS · GTE-large embeddings for memory · [TheSportsDB](https://www.thesportsdb.com/) for World Cup data · own E2E WebSocket relay + house commentator for rooms.
 
 ## Planned (not yet built)
 
-More agents representing different people in an autonomous lobby, and a house commentator that narrates a live match from the data feed.
+An autonomous lobby where more agents — each representing a different person — take turns without a human prompting every beat.
 
 ## Third-party / attribution
 
