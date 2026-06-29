@@ -92,13 +92,21 @@ bun day0/check.ts        # or: bun day0/check.ts llm | tts | embed
 
 `bun` · `@qvac/sdk` (on-device LLM / TTS / STT / embeddings, via Holepunch Bare) · Qwen3 8B Q4 brain (1.7B/4B selectable via `KHOROS_LLM`) · Supertonic TTS · GTE-large embeddings for memory · [TheSportsDB](https://www.thesportsdb.com/) for World Cup data · own E2E WebSocket relay + house commentator for rooms.
 
-## Distribution
+## Desktop app
 
-Khoros runs on-device, so there's almost nothing to *host* — only something to
-*distribute*. A single `bun build --compile` binary doesn't work with QVAC's
-native Bare runtime; the supported routes are an Electron desktop app, an Expo
-mobile app, or Pear (P2P). See [PACKAGING.md](PACKAGING.md) for the tested
-assessment and the recommendation.
+For "install and just use it" — no `bun`, no repo, no model setup — there's a
+double-clickable desktop build in [`desktop/`](desktop/). It's an Electron shell
+around the same agent core (which is Node-portable), packaged with QVAC's Forge
+plugin into a standalone `Khoros.app` that boots and runs the models on its own.
+
+```bash
+cd desktop && npm install && npm start   # dev run
+npm run make                             # build a .dmg / .zip (per arch)
+```
+
+A single `bun build --compile` binary *doesn't* work (QVAC's native Bare runtime
+can't be sealed into one file) — [PACKAGING.md](PACKAGING.md) has the tested
+assessment and why Electron / Expo / Pear are the real routes.
 
 ## Third-party / attribution
 

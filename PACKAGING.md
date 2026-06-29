@@ -23,7 +23,7 @@ Models download themselves from the QVAC registry on first run (cached under
 | --- | --- | --- |
 | **Run from source** | ✅ works now | `bun install` → `bun demo` / `bun demo:lobby`. Fine for the (technical) hackathon judges. |
 | **Single binary** (`bun build --compile`) | ❌ not viable | Builds, but won't run — see below. |
-| **Electron desktop app** | ✅ supported path | QVAC ships `@qvac/sdk/electron-forge`. Produces a `.app` / `.dmg`. |
+| **Electron desktop app** | ✅ **built** (`desktop/`) | Double-clickable `Khoros.app`; packaged + boots QVAC standalone. See below. |
 | **Mobile** (Expo) | ✅ supported path | QVAC ships Expo iOS/Android link plugins. |
 | **Pear** (Holepunch P2P) | ✅ on-brand | Via `@qvac/bare-sdk`; P2P distribution, no server, no app store. |
 
@@ -45,20 +45,26 @@ when they are installed and present on disk. So the one-file binary is a dead en
 for this native stack. (`pkg/smoke.ts` still runs fine the normal way:
 `bun pkg/smoke.ts`.)
 
-### The real desktop path: Electron
+### The real desktop path: Electron — built, in [`desktop/`](desktop/)
 
-QVAC's `@qvac/sdk/electron-forge` plugin exists for exactly this: it bundles the
-worker, verifies the native addons, and tree-shakes unused `@qvac/*` addons and
-non-target prebuilds into the packaged app. Notes from the plugin itself:
+`@qvac/sdk/electron-forge` exists for exactly this, and Khoros now ships a desktop
+app that uses it. The agent core (`agent/`, `config.ts`, `tools/`) is Node-portable,
+so the Electron main process reuses it directly; esbuild bundles the main process
+(keeping `@qvac/sdk` external/native), and the Forge plugin bundles the worker,
+verifies the native addons, and tree-shakes non-target prebuilds.
 
-- Build **per architecture** — `darwin-arm64` and `darwin-x64` separately; macOS
-  `universal` is not supported (prebuilds are arch-specific).
-- The result is a normal double-clickable desktop app; models still download on
-  first run.
+Verified end to end:
 
-This is the route to a consumer "download and run" Khoros. It is a separate
-project (Electron main/renderer + a UI + Forge config + per-arch builds), so it's
-tracked here as the distribution plan rather than built into this CLI repo.
+- `npm run package` produces `Khoros.app` (darwin-arm64), bundling 37 native addons
+  and pruning ~2.9 GB of non-target prebuilds.
+- The **packaged `.app` boots standalone** (no repo, no `bun`) and loads the QVAC
+  models — i.e. the exact thing the single binary couldn't do.
+- Build **per architecture** — `darwin-arm64` / `darwin-x64` separately; macOS
+  `universal` is not supported (prebuilds are arch-specific). Models still download
+  on first run.
+
+See [`desktop/README.md`](desktop/README.md) to run (`npm start`) or package
+(`npm run make`).
 
 ## Recommendation
 
