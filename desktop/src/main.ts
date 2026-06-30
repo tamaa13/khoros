@@ -242,19 +242,29 @@ app.whenReady().then(async () => {
 
   // On-device speech-to-text (QVAC Whisper). Lazy-loaded listener.
   let listener: any = null;
+  let listenerLoading: Promise<boolean> | null = null;
   async function ensureListener(): Promise<boolean> {
     if (listener) return true;
-    try {
-      send("status", "loading the on-device ear…");
-      const { Listener } = await import("../../agent/transcribe");
-      const l = new Listener();
-      await l.init();
-      listener = l;
-      return true;
-    } catch (e: any) {
-      console.error("[stt] load failed:", e?.message ?? e);
-      return false;
-    }
+    // In-flight guard: large-v3-turbo downloads ~1.5GB on first use; if the user
+    // taps the mic again mid-download, await the SAME load (don't double-load,
+    // which causes "Model already registered").
+    if (listenerLoading) return listenerLoading;
+    listenerLoading = (async () => {
+      try {
+        send("status", "loading the on-device ear (first time downloads ~1.5GB)…");
+        const { Listener } = await import("../../agent/transcribe");
+        const l = new Listener();
+        await l.init();
+        listener = l;
+        return true;
+      } catch (e: any) {
+        console.error("[stt] load failed:", e?.message ?? e);
+        return false;
+      } finally {
+        listenerLoading = null;
+      }
+    })();
+    return listenerLoading;
   }
   ipcMain.handle("transcribe", async (_e, base64Wav: string) => {
     try {

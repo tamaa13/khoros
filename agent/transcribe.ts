@@ -13,7 +13,20 @@ export class Listener {
     // better Indonesian). translate:false keeps the SPOKEN language, auto-detects
     // by default. (detect_language:true breaks load — "must be false if language
     // is not auto".) Heavier (~1.5GB, downloads once) but worth it for accuracy.
-    this.modelId = await Q.loadModel({
+    try {
+      this.modelId = await this.load();
+    } catch (e: any) {
+      // A stale/orphaned worker may already hold this model ("Model with ID X is
+      // already registered") — unload that ID and retry with a clean slate.
+      const m = String(e?.message ?? e).match(/Model with ID "([0-9a-f]+)" is already registered/);
+      if (!m) throw e;
+      await Q.unloadModel({ modelId: m[1] }).catch(() => {});
+      this.modelId = await this.load();
+    }
+  }
+
+  private load(): Promise<string> {
+    return Q.loadModel({
       modelSrc: Q.WHISPER_LARGE_V3_TURBO,
       modelConfig: { no_timestamps: true, translate: false },
     });
