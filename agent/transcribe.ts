@@ -14,7 +14,7 @@ export class Listener {
     // English) — STT should paste back exactly what was said.
     this.modelId = await Q.loadModel({
       modelSrc: Q.WHISPER_BASE_Q8_0,
-      modelConfig: { no_timestamps: true, translate: false },
+      modelConfig: { no_timestamps: true, translate: false, detect_language: true },
     });
   }
 
