@@ -174,6 +174,7 @@ const HELP = [
   "/name <name> — rename your agent",
   "/language <lang> — reply language (e.g. /language Indonesian, /language English)",
   "/voice on|off — spoken replies (on-device TTS)",
+  "/translate <text> — on-device translation (e.g. id→en); /translate es:en <text>",
   "/memories — what your agent remembers",
   "/recall <query> — search memory",
   "/clear — clear this chat",
@@ -208,6 +209,17 @@ async function runCommand(raw) {
       const isEnglish = /^(en|english)$/i.test(v);
       await window.khoros.setSettings({ language: isEnglish ? "" : v });
       addSystem(thread, `Language set to ${isEnglish ? "English" : v}.`);
+      break;
+    }
+    case "translate":
+    case "tr": {
+      if (!arg) return addSystem(thread, "Usage: /translate <text>  (or /translate es:en <text>)");
+      let from = "id", to = "en", text = arg;
+      const m = arg.match(/^([a-z]{2}):([a-z]{2})\s+(.+)$/i);
+      if (m) { from = m[1].toLowerCase(); to = m[2].toLowerCase(); text = m[3]; }
+      addSystem(thread, `…translating (${from}→${to}, on-device)`);
+      const r = await window.khoros.translate(text, from, to);
+      addSystem(thread, r && r.ok ? `${from}→${to}: ${r.text}` : `translate failed: ${r?.error ?? "unknown"}`);
       break;
     }
     case "voice": {

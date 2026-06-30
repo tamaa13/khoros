@@ -121,6 +121,25 @@ app.whenReady().then(async () => {
     }
   });
 
+  // On-device translation (QVAC Bergamot NMT). Lazy-loaded translator; swaps
+  // language pairs on demand.
+  let translator: any = null;
+  ipcMain.handle("translate", async (_e, text: string, from = "id", to = "en") => {
+    try {
+      if (!translator) {
+        const { Translator } = await import("../../agent/translate");
+        translator = new Translator();
+      }
+      console.error("[translate]", from, "->", to, JSON.stringify(text).slice(0, 60));
+      const out = await translator.translate(text, from, to);
+      console.error("[translate] result:", JSON.stringify(out).slice(0, 120));
+      return out === null ? { ok: false, error: `no model for ${from}->${to}` } : { ok: true, text: out };
+    } catch (e: any) {
+      console.error("[translate] error:", e?.message ?? e);
+      return { ok: false, error: String(e?.message ?? e) };
+    }
+  });
+
   // Settings (name / language / voice) — read + update, persisted to disk.
   ipcMain.handle("settings:get", () => ({ ...settings }));
   ipcMain.handle("settings:set", (_e, patch: Partial<Settings>) => {
