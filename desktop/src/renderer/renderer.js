@@ -25,6 +25,32 @@ const input = document.getElementById("input");
 const send = document.getElementById("send");
 const micBtn = document.getElementById("mic");
 
+// image preview (lightbox)
+const lightbox = document.getElementById("lightbox");
+const lightboxImg = document.getElementById("lightboxImg");
+let lightboxSrc = "";
+function openLightbox(src, caption) {
+  lightboxSrc = src;
+  lightboxImg.src = src;
+  lightboxImg.alt = caption || "preview";
+  lightbox.hidden = false;
+}
+function closeLightbox() {
+  lightbox.hidden = true;
+  lightboxImg.src = "";
+}
+if (lightbox) {
+  lightbox.addEventListener("click", (e) => { if (e.target === lightbox) closeLightbox(); });
+  document.getElementById("lightboxClose").addEventListener("click", closeLightbox);
+  document.getElementById("lightboxSave").addEventListener("click", () => {
+    const a = document.createElement("a");
+    a.href = lightboxSrc;
+    a.download = "khoros-image.png";
+    a.click();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !lightbox.hidden) closeLightbox(); });
+}
+
 let ready = false;
 let lobbyRunning = false;
 let voiceOn = false;
@@ -199,6 +225,9 @@ function addImage(threadEl, base64, caption) {
   const img = document.createElement("img");
   img.src = "data:image/png;base64," + base64;
   img.alt = caption || "generated image";
+  img.style.cursor = "zoom-in";
+  img.title = "click to preview";
+  img.addEventListener("click", () => openLightbox(img.src, caption));
   bubble.appendChild(img);
   if (caption) {
     const c = document.createElement("div");
