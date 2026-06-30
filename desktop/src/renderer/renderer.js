@@ -211,6 +211,7 @@ function addSystem(threadEl, text) {
   el.textContent = text;
   threadEl.appendChild(el);
   scrollDown(threadEl);
+  return el; // returned so a "…loading" line can be replaced with the result
 }
 
 // Render a generated image (base64 PNG) as an agent message.
@@ -358,8 +359,9 @@ async function runCommand(raw) {
       addSystem(thread, "…painting on-device (grounding on a real photo if I can find one)");
       const r = await window.khoros.imagine(arg);
       if (r && r.ok && r.png) {
-        addImage(thread, r.png, r.grounded ? `${arg} · grounded on ${r.source}` : arg);
-        if (r.grounded) addSystem(thread, `🎯 Grounded on a real ${r.source} (TheSportsDB) — img2img keeps the real face/kit, AI adds the scene.`);
+        addImage(thread, r.png, r.source || arg);
+        if (r.real) addSystem(thread, `📷 ${r.source} — the real, current photo. (A generator can't reproduce a real face/kit, so the real photo IS the accurate answer.)`);
+        else if (r.grounded) addSystem(thread, `🎯 Grounded on a ${r.source} — img2img kept the real face/kit + added styling.`);
       } else addSystem(thread, `imagine failed: ${r && r.error ? r.error : "unknown"}`);
       break;
     }
@@ -369,9 +371,10 @@ async function runCommand(raw) {
       let from = "id", to = "en", text = arg;
       const m = arg.match(/^([a-z]{2}):([a-z]{2})\s+(.+)$/i);
       if (m) { from = m[1].toLowerCase(); to = m[2].toLowerCase(); text = m[3]; }
-      addSystem(thread, `…translating (${from}→${to}, on-device)`);
+      const line = addSystem(thread, `…translating (${from}→${to}, on-device)`);
       const r = await window.khoros.translate(text, from, to);
-      addSystem(thread, r && r.ok ? `${from}→${to}: ${r.text}` : `translate failed: ${r?.error ?? "unknown"}`);
+      line.textContent = r && r.ok ? `${from}→${to}: ${r.text}` : `translate failed: ${r?.error ?? "unknown"}`;
+      scrollDown(thread);
       break;
     }
     case "evolve":
@@ -413,9 +416,10 @@ async function runCommand(raw) {
     }
     case "listen": {
       if (/^test$/i.test(arg)) {
-        addSystem(thread, "…running TTS→STT self-test (on-device)");
+        const line = addSystem(thread, "…running TTS→STT self-test (on-device)");
         const r = await window.khoros.sttSelfTest();
-        addSystem(thread, r && r.ok ? `STT self-test (on-device):\n  said:  ${r.original}\n  heard: ${r.transcribed}` : `self-test failed: ${r && r.error ? r.error : "unknown"}`);
+        line.textContent = r && r.ok ? `STT self-test (on-device):\n  said:  ${r.original}\n  heard: ${r.transcribed}` : `self-test failed: ${r && r.error ? r.error : "unknown"}`;
+        scrollDown(thread);
       } else {
         toggleMic();
       }
@@ -441,9 +445,10 @@ async function runCommand(raw) {
     }
     case "schedule": {
       const when = /recent|result|hasil|past/i.test(arg) ? "recent" : "upcoming";
-      addSystem(thread, "…fetching World Cup data");
+      const line = addSystem(thread, "…fetching World Cup data");
       const s = await window.khoros.schedule(when);
-      addSystem(thread, s);
+      line.textContent = s;
+      scrollDown(thread);
       break;
     }
     case "rooms":
