@@ -1,14 +1,16 @@
 /**
- * World Cup 2026 data via TheSportsDB (free tier, no signup — facts only, never
- * logos/badges). The free test key works out of the box; set THESPORTSDB_KEY to
- * use your own. Source must be disclosed; broadcast video is never touched.
+ * World Cup 2026 data. Fixtures + live scores come from ESPN's public soccer API
+ * (no key, current + complete: every match per day, venues, live/finished scores).
+ * Reference images for /imagine still come from TheSportsDB. Source disclosed;
+ * broadcast video is never touched.
  */
-const KEY = process.env.THESPORTSDB_KEY ?? "3"; // free public test key
+const ESPN = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
+const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36";
+const KEY = process.env.THESPORTSDB_KEY ?? "3"; // free public test key (images only)
 const BASE = `https://www.thesportsdb.com/api/v1/json/${KEY}`;
-const WC_LEAGUE_ID = "4429"; // "FIFA World Cup" in TheSportsDB
 
 export interface Fixture {
-  id?: string; // TheSportsDB idEvent — stable per match, used to derive room topics
+  id?: string; // ESPN event id — stable per match, used to derive room topics
   date: string;
   time?: string;
   home: string;
@@ -76,26 +78,43 @@ export async function referenceImage(query: string, preferTeam = false): Promise
   return preferTeam ? (await teamRef(q)) ?? (await playerRef(q)) : (await playerRef(q)) ?? (await teamRef(q));
 }
 
-async function fetchEvents(path: string): Promise<any[]> {
-  const res = await fetch(`${BASE}/${path}`, { signal: AbortSignal.timeout(15000) });
-  if (!res.ok) throw new Error(`TheSportsDB HTTP ${res.status}`);
+// ---- ESPN fixtures/scores ----
+function ymd(d: Date): string {
+  return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+function shiftDays(d: Date, days: number): Date {
+  const x = new Date(d);
+  x.setUTCDate(x.getUTCDate() + days);
+  return x;
+}
+async function espnEvents(datesParam: string): Promise<any[]> {
+  const res = await fetch(`${ESPN}?dates=${datesParam}`, {
+    headers: { "User-Agent": UA },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error(`ESPN HTTP ${res.status}`);
   const data = await res.json();
   return data.events ?? [];
 }
-
 function toFixture(e: any): Fixture {
+  const c = e.competitions?.[0] ?? {};
+  const comps = c.competitors ?? [];
+  const home = comps.find((x: any) => x.homeAway === "home") ?? comps[0] ?? {};
+  const away = comps.find((x: any) => x.homeAway === "away") ?? comps[1] ?? {};
+  const st = e.status?.type ?? {};
+  const hasScore = st.state === "in" || st.completed === true; // "0" is meaningless pre-match
   const num = (v: any) => (v === null || v === "" || v === undefined ? null : Number(v));
   return {
-    id: e.idEvent ? String(e.idEvent) : undefined,
-    date: e.dateEvent,
-    time: typeof e.strTime === "string" ? e.strTime.slice(0, 5) : undefined,
-    home: e.strHomeTeam,
-    away: e.strAwayTeam,
-    homeScore: num(e.intHomeScore),
-    awayScore: num(e.intAwayScore),
-    status: e.strStatus,
-    venue: e.strVenue || undefined,
-    city: e.strCity || undefined,
+    id: e.id ? String(e.id) : undefined,
+    date: typeof e.date === "string" ? e.date.slice(0, 10) : "",
+    time: typeof e.date === "string" ? e.date.slice(11, 16) || undefined : undefined,
+    home: home.team?.displayName ?? "?",
+    away: away.team?.displayName ?? "?",
+    homeScore: hasScore ? num(home.score) : null,
+    awayScore: hasScore ? num(away.score) : null,
+    status: st.shortDetail ?? st.description ?? undefined,
+    venue: c.venue?.fullName || undefined,
+    city: c.venue?.address?.city || undefined,
   };
 }
 
@@ -115,23 +134,28 @@ export async function listFixtures(
   when: "upcoming" | "recent" = "upcoming",
   limit = 6,
 ): Promise<Fixture[]> {
-  const path =
+  const now = new Date();
+  const range =
     when === "recent"
-      ? `eventspastleague.php?id=${WC_LEAGUE_ID}`
-      : `eventsnextleague.php?id=${WC_LEAGUE_ID}`;
-  return (await fetchEvents(path)).map(toFixture).slice(0, limit);
+      ? `${ymd(shiftDays(now, -18))}-${ymd(now)}`
+      : `${ymd(now)}-${ymd(shiftDays(now, 18))}`;
+  const events = await espnEvents(range);
+  const wanted =
+    when === "recent"
+      ? events.filter((e) => e.status?.type?.completed === true)
+      : events.filter((e) => e.status?.type?.state === "pre" || e.status?.type?.state === "in");
+  const fx = wanted.map(toFixture);
+  fx.sort((a, b) =>
+    when === "recent" ? (b.date + (b.time ?? "")).localeCompare(a.date + (a.time ?? "")) : (a.date + (a.time ?? "")).localeCompare(b.date + (b.time ?? "")),
+  );
+  return fx.slice(0, limit);
 }
 
 /** Matches happening today (upcoming + just-finished) — the lobby's live rooms. */
 export async function todayMatches(): Promise<Fixture[]> {
-  const today = new Date().toISOString().slice(0, 10);
   try {
-    const [up, recent] = await Promise.all([listFixtures("upcoming", 16), listFixtures("recent", 16)]);
-    const byId = new Map<string, Fixture>();
-    for (const f of [...up, ...recent]) {
-      if (f.date === today) byId.set(f.id ?? `${f.home}-${f.away}`, f);
-    }
-    return [...byId.values()];
+    const events = await espnEvents(ymd(new Date()));
+    return events.map(toFixture);
   } catch {
     return [];
   }
@@ -165,21 +189,13 @@ export async function getFixtures(
 }
 
 /**
- * Today's World Cup matches and their latest status/score. The free TheSportsDB
- * tier has no realtime livescore feed, so "live" here is today's fixtures with
- * the latest known result — honest about its source rather than faking a feed.
+ * Today's World Cup matches with their latest status/score from ESPN (finished,
+ * live, or scheduled). Source disclosed; not a faked feed.
  */
 export async function getLive(limit = 6): Promise<string> {
   const today = new Date().toISOString().slice(0, 10);
   try {
-    const [past, next] = await Promise.all([
-      fetchEvents(`eventspastleague.php?id=${WC_LEAGUE_ID}`).catch(() => []),
-      fetchEvents(`eventsnextleague.php?id=${WC_LEAGUE_ID}`).catch(() => []),
-    ]);
-    const todays = [...past, ...next]
-      .filter((e) => e.dateEvent === today)
-      .map(toFixture)
-      .slice(0, limit);
+    const todays = (await espnEvents(ymd(new Date()))).map(toFixture).slice(0, limit);
     if (todays.length === 0) return `No World Cup matches scheduled today (${today}).`;
     return `Today's World Cup matches (${today}):\n${todays.map((f) => `- ${line(f)}`).join("\n")}`;
   } catch (e: any) {
