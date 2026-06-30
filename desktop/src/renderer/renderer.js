@@ -23,6 +23,7 @@ const matchStrip = document.getElementById("matchStrip");
 const composer = document.getElementById("composer");
 const input = document.getElementById("input");
 const send = document.getElementById("send");
+const micBtn = document.getElementById("mic");
 
 let ready = false;
 let lobbyRunning = false;
@@ -165,6 +166,53 @@ function addTyping(threadEl) {
   return row;
 }
 
+// ---------- voice input (on-device STT) ----------
+function encodeWav(float32, sampleRate) {
+  const len = float32.length;
+  const buf = new ArrayBuffer(44 + len * 2);
+  const view = new DataView(buf);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, "RIFF"); view.setUint32(4, 36 + len * 2, true); w(8, "WAVE"); w(12, "fmt ");
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true); view.setUint16(34, 16, true); w(36, "data"); view.setUint32(40, len * 2, true);
+  let o = 44;
+  for (let i = 0; i < len; i++) { const s = Math.max(-1, Math.min(1, float32[i])); view.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true); o += 2; }
+  return new Uint8Array(buf);
+}
+function u8ToBase64(u8) { let s = ""; for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]); return btoa(s); }
+
+let mic = { recording: false, ctx: null, stream: null, node: null, chunks: [], rate: 16000 };
+async function toggleMic() {
+  if (mic.recording) return stopMic();
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const ctx = new AudioContext();
+    const srcNode = ctx.createMediaStreamSource(stream);
+    const node = ctx.createScriptProcessor(4096, 1, 1);
+    mic = { recording: true, ctx, stream, node, chunks: [], rate: ctx.sampleRate };
+    node.onaudioprocess = (e) => mic.chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+    srcNode.connect(node); node.connect(ctx.destination);
+    micBtn.classList.add("recording"); micBtn.textContent = "■";
+    addSystem(thread, "🎤 listening… tap the square to stop.");
+  } catch (e) { addSystem(thread, "mic unavailable: " + (e && e.message ? e.message : e)); }
+}
+async function stopMic() {
+  const { ctx, stream, node, chunks, rate } = mic;
+  mic.recording = false;
+  micBtn.classList.remove("recording"); micBtn.textContent = "🎤";
+  try { node.disconnect(); stream.getTracks().forEach((t) => t.stop()); await ctx.close(); } catch {}
+  const len = chunks.reduce((a, c) => a + c.length, 0);
+  if (len < rate * 0.3) return addSystem(thread, "(too short — try again)");
+  const all = new Float32Array(len);
+  let off = 0; for (const c of chunks) { all.set(c, off); off += c.length; }
+  addSystem(thread, "…transcribing (on-device)");
+  const r = await window.khoros.transcribe(u8ToBase64(encodeWav(all, rate)));
+  if (r && r.ok && r.text) { input.value = r.text; input.focus(); addSystem(thread, `🎤 “${r.text}”`); }
+  else addSystem(thread, `transcribe failed: ${r && r.error ? r.error : "unknown"}`);
+}
+if (micBtn) micBtn.addEventListener("click", toggleMic);
+
 // ---------- slash commands ----------
 const HELP = [
   "/help — this list",
@@ -175,6 +223,7 @@ const HELP = [
   "/language <lang> — reply language (e.g. /language Indonesian, /language English)",
   "/voice on|off — spoken replies (on-device TTS)",
   "/translate <text> — on-device translation (e.g. id→en); /translate es:en <text>",
+  "/listen — voice input (on-device STT); /listen test — TTS→STT self-test",
   "/memories — what your agent remembers",
   "/recall <query> — search memory",
   "/clear — clear this chat",
@@ -220,6 +269,16 @@ async function runCommand(raw) {
       addSystem(thread, `…translating (${from}→${to}, on-device)`);
       const r = await window.khoros.translate(text, from, to);
       addSystem(thread, r && r.ok ? `${from}→${to}: ${r.text}` : `translate failed: ${r?.error ?? "unknown"}`);
+      break;
+    }
+    case "listen": {
+      if (/^test$/i.test(arg)) {
+        addSystem(thread, "…running TTS→STT self-test (on-device)");
+        const r = await window.khoros.sttSelfTest();
+        addSystem(thread, r && r.ok ? `STT self-test (on-device):\n  said:  ${r.original}\n  heard: ${r.transcribed}` : `self-test failed: ${r && r.error ? r.error : "unknown"}`);
+      } else {
+        toggleMic();
+      }
       break;
     }
     case "voice": {
