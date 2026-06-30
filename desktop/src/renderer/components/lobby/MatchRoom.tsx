@@ -29,7 +29,7 @@ export interface CrewMsg {
   remote?: boolean;
 }
 
-const CONFETTI = ["#F4C44C", "#3DA968", "#F1F2F5", "#F4C44C", "#3DA968", "#C49A33"];
+const CONFETTI = ["rgb(var(--cf4c44c))", "rgb(var(--c3da968))", "rgb(var(--cf1f2f5))", "rgb(var(--cf4c44c))", "rgb(var(--c3da968))", "rgb(var(--cc49a33))"];
 const KEY_LABEL: Record<string, string> = { "⚽": "GOAL", "🟥": "RED CARD", "🟨": "YELLOW", "🎯": "PENALTY", "🔁": "SUB", "🔄": "SUB" };
 
 export function MatchRoom({ score, feed, crew, watching, goal, onBack }: { score: Score | null; feed: FeedRow[]; crew: CrewMsg[]; watching: number; goal: boolean; onBack: () => void }) {
@@ -45,8 +45,8 @@ export function MatchRoom({ score, feed, crew, watching, goal, onBack }: { score
   return (
     <div className="flex h-full flex-col">
       {/* room bar */}
-      <div className="flex flex-shrink-0 items-center gap-[10px] border-b border-[#1F2128] bg-[#0C0D11] px-[14px] py-[10px]">
-        <button onClick={onBack} className="flex items-center gap-[6px] rounded-full border border-border-subtle bg-[#111217] py-[6px] pl-2 pr-[11px] text-[12px] text-content-muted transition-colors hover:text-content">
+      <div className="flex flex-shrink-0 items-center gap-[10px] border-b border-[rgb(var(--c1f2128))] bg-[rgb(var(--c0c0d11))] px-[14px] py-[10px]">
+        <button onClick={onBack} className="flex items-center gap-[6px] rounded-full border border-border-subtle bg-[rgb(var(--c111217))] py-[6px] pl-2 pr-[11px] text-[12px] text-content-muted transition-colors hover:text-content">
           <ChevronLeft className="h-[15px] w-[15px]" strokeWidth={1.75} /> Rooms
         </button>
         {watching > 0 && (
@@ -58,19 +58,19 @@ export function MatchRoom({ score, feed, crew, watching, goal, onBack }: { score
 
       {/* scoreboard */}
       {score && (
-        <div className={`relative flex-shrink-0 overflow-hidden border-b border-[#1F2128] bg-[#0C0D11] px-[18px] pb-[14px] pt-4 ${goal ? "animate-goal-glow" : ""}`}>
+        <div className={`relative flex-shrink-0 overflow-hidden border-b border-[rgb(var(--c1f2128))] bg-[rgb(var(--c0c0d11))] px-[18px] pb-[14px] pt-4 ${goal ? "animate-goal-glow" : ""}`}>
           {goal &&
             CONFETTI.map((c, i) => (
               <span key={i} className="absolute -top-[6px] h-[9px] w-[6px] rounded-[1px] animate-confetti" style={{ left: `${12 + i * 15}%`, background: c, animationDelay: `${i * 0.12}s` }} />
             ))}
           <div className="mb-[13px] flex items-center justify-center gap-[8px]">
             {score.live ? (
-              <span className="flex items-center gap-[6px] rounded-full border border-[#4d2026] bg-live/[.15] px-[9px] py-[3px]">
+              <span className="flex items-center gap-[6px] rounded-full border border-[rgb(var(--c4d2026))] bg-live/[.15] px-[9px] py-[3px]">
                 <span className="h-[7px] w-[7px] rounded-full bg-live animate-pulse-dot" />
                 <span className="text-[10.5px] font-extrabold tracking-[.08em] text-live-bright">LIVE</span>
               </span>
             ) : (
-              <span className="rounded-full border border-border-subtle bg-[#181920] px-[9px] py-[3px] text-[10.5px] font-bold tracking-[.06em] text-content-muted">REPLAY</span>
+              <span className="rounded-full border border-border-subtle bg-[rgb(var(--c181920))] px-[9px] py-[3px] text-[10.5px] font-bold tracking-[.06em] text-content-muted">REPLAY</span>
             )}
             <span className="display text-[13px] tabular-nums" style={{ fontVariationSettings: "'wdth' 110" }}>
               {score.minute}
@@ -89,7 +89,7 @@ export function MatchRoom({ score, feed, crew, watching, goal, onBack }: { score
       )}
 
       {/* feed | crew — each column scrolls independently with a fixed header */}
-      <div className="flex min-h-0 flex-1 gap-px bg-[#1F2128]">
+      <div className="flex min-h-0 flex-1 gap-px bg-[rgb(var(--c1f2128))]">
         <div className="flex min-w-0 flex-1 flex-col bg-bg-base">
           <div className="flex-shrink-0 px-[11px] pb-2 pt-[13px]">
             <Header>Match feed</Header>
@@ -104,14 +104,14 @@ export function MatchRoom({ score, feed, crew, watching, goal, onBack }: { score
                   const isGoal = r.emoji === "⚽";
                   const label = r.key ? KEY_LABEL[r.emoji ?? ""] : undefined;
                   return (
-                    <div key={r.id} className={`flex flex-shrink-0 gap-[8px] rounded-[11px] px-[10px] py-[9px] animate-rise ${isGoal ? "border border-[#3A3320] bg-gold/[.1]" : "bg-[#111217]"}`}>
+                    <div key={r.id} className={`flex flex-shrink-0 gap-[8px] rounded-[11px] px-[10px] py-[9px] animate-rise ${isGoal ? "border border-[rgb(var(--c3a3320))] bg-gold/[.1]" : "bg-[rgb(var(--c111217))]"}`}>
                       <span className="flex-shrink-0 text-[13px]">{r.emoji || "•"}</span>
                       <div className="min-w-0">
                         <div className={`text-[11px] ${isGoal ? "font-bold text-gold-bright" : label ? "font-semibold text-content-muted" : "text-content-faint"}`}>
                           {r.clock}
                           {label ? ` · ${label}` : ""}
                         </div>
-                        <div className="text-[12px] leading-[1.35] text-[#C9CDD6]">{r.text}</div>
+                        <div className="text-[12px] leading-[1.35] text-[rgb(var(--cc9cdd6))]">{r.text}</div>
                       </div>
                     </div>
                   );
@@ -127,19 +127,19 @@ export function MatchRoom({ score, feed, crew, watching, goal, onBack }: { score
           <div ref={crewRef} className="kh-scroll flex flex-1 flex-col gap-[9px] overflow-y-auto px-[11px] pb-[13px]">
             {crew.length === 0 && <div className="px-1 text-[12px] text-content-faint">The crew's gathering…</div>}
             {crew.map((c) => (
-              <div key={c.id} className={`flex-shrink-0 rounded-[12px] border px-[10px] py-[9px] animate-rise ${c.told ? "border-[#3A3320] bg-[#100F0A]" : c.from === "Commentator" ? "border-[#1c3354] bg-[#0c1622]" : "border-surface-3 bg-[#111217]"}`}>
+              <div key={c.id} className={`flex-shrink-0 rounded-[12px] border px-[10px] py-[9px] animate-rise ${c.told ? "border-[rgb(var(--c3a3320))] bg-[rgb(var(--c100f0a))]" : c.from === "Commentator" ? "border-[rgb(var(--c1c3354))] bg-[rgb(var(--c0c1622))]" : "border-surface-3 bg-[rgb(var(--c111217))]"}`}>
                 <div className="mb-[5px] flex items-center gap-[6px]">
                   {c.from === "Commentator" ? (
-                    <span className="flex h-[17px] w-[17px] flex-shrink-0 items-center justify-center rounded-full bg-[#13243a]">
+                    <span className="flex h-[17px] w-[17px] flex-shrink-0 items-center justify-center rounded-full bg-[rgb(var(--c13243a))]">
                       <Mic className="h-[9px] w-[9px] text-cast" />
                     </span>
                   ) : (
                     <AgentGlyph size={17} />
                   )}
-                  <span className={`text-[11px] font-bold ${c.from === "Commentator" ? "text-[#AAC0DE]" : "text-content"}`}>{c.from}</span>
+                  <span className={`text-[11px] font-bold ${c.from === "Commentator" ? "text-[rgb(var(--caac0de))]" : "text-content"}`}>{c.from}</span>
                   {c.told && <Undo2 className="ml-auto h-[11px] w-[11px] text-gold" strokeWidth={2} />}
                 </div>
-                <div className={`text-[12px] leading-[1.4] ${c.told ? "text-[#F3E7C4]" : "text-[#C9CDD6]"}`}>{c.text}</div>
+                <div className={`text-[12px] leading-[1.4] ${c.told ? "text-[rgb(var(--cf3e7c4))]" : "text-[rgb(var(--cc9cdd6))]"}`}>{c.text}</div>
               </div>
             ))}
           </div>

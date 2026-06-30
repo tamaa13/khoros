@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Dna, Languages, ShieldCheck, Volume2, X } from "lucide-react";
+import { Dna, Languages, Moon, ShieldCheck, Sun, Volume2, X } from "lucide-react";
 import { khoros } from "../khoros";
 
 const LANGS = ["English", "Indonesian", "Spanish", "French"];
 
-export function SettingsMenu({ voice, onVoiceChange, language, onLanguageChange, onClose }: { voice: boolean; onVoiceChange: (v: boolean) => void; language: string; onLanguageChange: (l: string) => void; onClose: () => void }) {
+export function SettingsMenu({ voice, onVoiceChange, language, onLanguageChange, theme, onThemeChange, onClose }: { voice: boolean; onVoiceChange: (v: boolean) => void; language: string; onLanguageChange: (l: string) => void; theme: "dark" | "light"; onThemeChange: (t: "dark" | "light") => void; onClose: () => void }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [evolving, setEvolving] = useState(false);
   const [evo, setEvo] = useState<Record<string, any> | null>(null);
@@ -39,11 +39,26 @@ export function SettingsMenu({ voice, onVoiceChange, language, onLanguageChange,
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
       <div className="absolute right-4 top-[50px] z-50 w-[262px] overflow-hidden rounded-[14px] border border-border bg-surface-1 shadow-pop animate-rise">
-        <div className="flex items-center justify-between border-b border-[#1F2128] px-[14px] py-[10px]">
+        <div className="flex items-center justify-between border-b border-[rgb(var(--c1f2128))] px-[14px] py-[10px]">
           <span className="text-[11px] font-bold uppercase tracking-[.1em] text-content-faint">Settings</span>
           <button onClick={onClose} aria-label="Close">
             <X className="h-[14px] w-[14px] text-content-faint hover:text-content" />
           </button>
+        </div>
+
+        <div className="border-b border-[rgb(var(--c1f2128))] px-[14px] py-[12px]">
+          <div className="mb-[8px] flex items-center gap-[8px]">
+            <Sun className="h-[15px] w-[15px] text-content-muted" strokeWidth={1.75} />
+            <span className="text-[13px] font-medium text-content">Appearance</span>
+          </div>
+          <div className="flex gap-[6px] rounded-[10px] border border-border-subtle bg-surface-2 p-[3px]">
+            <button onClick={() => onThemeChange("dark")} className={`flex flex-1 items-center justify-center gap-[6px] rounded-[7px] py-[6px] text-[12px] font-medium transition-colors ${theme === "dark" ? "bg-surface-3 text-content shadow-card" : "text-content-muted hover:text-content"}`}>
+              <Moon className="h-[13px] w-[13px]" strokeWidth={1.75} /> Dark
+            </button>
+            <button onClick={() => onThemeChange("light")} className={`flex flex-1 items-center justify-center gap-[6px] rounded-[7px] py-[6px] text-[12px] font-medium transition-colors ${theme === "light" ? "bg-surface-3 text-content shadow-card" : "text-content-muted hover:text-content"}`}>
+              <Sun className="h-[13px] w-[13px]" strokeWidth={1.75} /> Light
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-[10px] px-[14px] py-[12px]">
@@ -55,7 +70,7 @@ export function SettingsMenu({ voice, onVoiceChange, language, onLanguageChange,
           <Toggle on={voice} onClick={() => onVoiceChange(!voice)} />
         </div>
 
-        <div className="border-t border-[#1F2128] px-[14px] py-[12px]">
+        <div className="border-t border-[rgb(var(--c1f2128))] px-[14px] py-[12px]">
           <div className="mb-[8px] flex items-center gap-[8px]">
             <Languages className="h-[15px] w-[15px] text-content-muted" strokeWidth={1.75} />
             <span className="text-[13px] font-medium text-content">Reply language</span>
@@ -69,7 +84,7 @@ export function SettingsMenu({ voice, onVoiceChange, language, onLanguageChange,
           </div>
         </div>
 
-        <div className="border-t border-[#1F2128] px-[14px] py-[12px]">
+        <div className="border-t border-[rgb(var(--c1f2128))] px-[14px] py-[12px]">
           <div className="mb-[6px] flex items-center gap-[8px]">
             <Dna className="h-[15px] w-[15px] text-content-muted" strokeWidth={1.75} />
             <span className="text-[13px] font-medium text-content">Auto-evolve</span>
@@ -84,7 +99,7 @@ export function SettingsMenu({ voice, onVoiceChange, language, onLanguageChange,
           {msg && <div className="mt-[6px] text-[11px] leading-[1.4] text-content-muted">{msg}</div>}
         </div>
 
-        <div className="flex items-center gap-[7px] border-t border-[#1F2128] px-[14px] py-[10px] text-[11px] text-content-faint">
+        <div className="flex items-center gap-[7px] border-t border-[rgb(var(--c1f2128))] px-[14px] py-[10px] text-[11px] text-content-faint">
           <ShieldCheck className="h-[13px] w-[13px] text-gold-deep" strokeWidth={1.75} /> Everything runs on your device.
         </div>
       </div>

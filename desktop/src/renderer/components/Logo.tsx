@@ -6,9 +6,9 @@ type Variant = "full" | "simple" | "mono";
 
 export function Logo({ size = 40, variant = "full", className, float }: { size?: number; variant?: Variant; className?: string; float?: boolean }) {
   const mono = variant === "mono";
-  const ring = mono ? "currentColor" : "#2A2D36";
-  const gold = mono ? "currentColor" : "#F4C44C";
-  const deep = mono ? "currentColor" : "#C49A33";
+  const ring = mono ? "currentColor" : "rgb(var(--c2a2d36))";
+  const gold = mono ? "currentColor" : "rgb(var(--cf4c44c))";
+  const deep = mono ? "currentColor" : "rgb(var(--cc49a33))";
   const style = float ? { animation: "float 5s ease-in-out infinite" } : undefined;
 
   if (variant === "simple") {
@@ -25,7 +25,7 @@ export function Logo({ size = 40, variant = "full", className, float }: { size?:
   }
 
   return (
-    <svg viewBox="0 0 100 100" width={size} height={size} fill="none" className={className} style={mono ? { color: "#0D0E12", ...style } : style}>
+    <svg viewBox="0 0 100 100" width={size} height={size} fill="none" className={className} style={mono ? { color: "rgb(var(--c0d0e12))", ...style } : style}>
       <circle cx="50" cy="50" r="36" stroke={ring} strokeWidth="2" opacity={mono ? 0.22 : 1} />
       <circle cx="50" cy="14" r="6.2" fill={gold} />
       <circle cx="75.45" cy="24.55" r="5.5" fill={gold} opacity={mono ? 0.85 : 1} />
@@ -49,7 +49,7 @@ export function AgentGlyph({ size = 28, className }: { size?: number; className?
         width: size,
         height: size,
         borderRadius: 99,
-        background: "radial-gradient(circle at 35% 30%,#2A2412,#14110A)",
+        background: "radial-gradient(circle at 35% 30%,rgb(var(--c2a2412)),rgb(var(--c14110a)))",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -57,7 +57,7 @@ export function AgentGlyph({ size = 28, className }: { size?: number; className?
       }}
     >
       <svg viewBox="0 0 100 100" width={size * 0.54} height={size * 0.54} fill="none">
-        <polygon points="50,30 70,45 62,68 38,68 30,45" fill="#F4C44C" />
+        <polygon points="50,30 70,45 62,68 38,68 30,45" fill="rgb(var(--cf4c44c))" />
       </svg>
     </span>
   );

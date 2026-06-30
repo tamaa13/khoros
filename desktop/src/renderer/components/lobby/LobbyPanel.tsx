@@ -99,7 +99,7 @@ export function LobbyPanel({ active }: { active: boolean }) {
                 <AgentGlyph size={18} />
                 <div className="min-w-0">
                   <span className="text-[11px] font-bold text-content">{m.from}</span>{" "}
-                  <span className="text-[12px] leading-[1.4] text-[#C9CDD6]">{m.text}</span>
+                  <span className="text-[12px] leading-[1.4] text-[rgb(var(--cc9cdd6))]">{m.text}</span>
                 </div>
               </div>
             ))}
@@ -142,22 +142,22 @@ function RoomCard({ room, onClick }: { room: RoomChoice; onClick: () => void }) 
   const replay = room.state === "post";
   const played = room.homeScore != null && room.awayScore != null;
   return (
-    <button onClick={onClick} className={`rounded-[16px] border p-[15px] text-left transition-all duration-fast hover:-translate-y-[2px] ${replay ? "border-border-subtle bg-surface-0 opacity-90 hover:opacity-100" : "border-border bg-[#111217] hover:border-border-strong"} ${room.live ? "hover:shadow-[0_0_22px_-4px_rgba(209,65,80,.5)]" : ""}`}>
+    <button onClick={onClick} className={`rounded-[16px] border p-[15px] text-left transition-all duration-fast hover:-translate-y-[2px] ${replay ? "border-border-subtle bg-surface-0 opacity-90 hover:opacity-100" : "border-border bg-[rgb(var(--c111217))] hover:border-border-strong"} ${room.live ? "hover:shadow-[0_0_22px_-4px_rgba(209,65,80,.5)]" : ""}`}>
       <div className="mb-[13px] flex items-center justify-between">
         {room.live ? (
-          <span className="flex items-center gap-[6px] rounded-full border border-[#4d2026] bg-live/[.14] px-[9px] py-[4px]">
+          <span className="flex items-center gap-[6px] rounded-full border border-[rgb(var(--c4d2026))] bg-live/[.14] px-[9px] py-[4px]">
             <span className="h-[7px] w-[7px] rounded-full bg-live animate-pulse-dot" />
             <span className="text-[10.5px] font-extrabold tracking-[.08em] text-live-bright">LIVE</span>
           </span>
         ) : replay ? (
-          <span className="flex items-center gap-[6px] rounded-full border border-border bg-[#181920] px-[9px] py-[4px]">
+          <span className="flex items-center gap-[6px] rounded-full border border-border bg-[rgb(var(--c181920))] px-[9px] py-[4px]">
             <Play className="h-[11px] w-[11px] text-content-muted" strokeWidth={2} />
             <span className="text-[10.5px] font-bold tracking-[.04em] text-content-muted">REPLAY</span>
           </span>
         ) : (
-          <span className="flex items-center gap-[6px] rounded-full border border-border bg-[#181920] px-[9px] py-[4px]">
+          <span className="flex items-center gap-[6px] rounded-full border border-border bg-[rgb(var(--c181920))] px-[9px] py-[4px]">
             <Clock className="h-[12px] w-[12px] text-content-muted" strokeWidth={1.75} />
-            <span className="text-[10.5px] font-bold tracking-[.04em] text-[#C9CDD6]">{room.kickoff || "soon"}</span>
+            <span className="text-[10.5px] font-bold tracking-[.04em] text-[rgb(var(--cc9cdd6))]">{room.kickoff || "soon"}</span>
           </span>
         )}
         <span className="flex items-center gap-1 text-[11px] text-content-faint">
@@ -168,7 +168,7 @@ function RoomCard({ room, onClick }: { room: RoomChoice; onClick: () => void }) 
       <div className="flex items-center gap-[12px]">
         <div className="flex min-w-0 flex-1 items-center gap-[10px]">
           <span className="text-[22px] leading-none">{room.homeFlag}</span>
-          <span className={`truncate text-[14px] font-semibold ${replay ? "text-[#C9CDD6]" : "text-content"}`}>{room.home}</span>
+          <span className={`truncate text-[14px] font-semibold ${replay ? "text-[rgb(var(--cc9cdd6))]" : "text-content"}`}>{room.home}</span>
         </div>
         {played ? (
           <span className="flex flex-shrink-0 items-center gap-[7px]">
@@ -180,7 +180,7 @@ function RoomCard({ room, onClick }: { room: RoomChoice; onClick: () => void }) 
           <span className="flex-shrink-0 text-[12px] font-semibold text-content-faint">vs</span>
         )}
         <div className="flex min-w-0 flex-1 items-center justify-end gap-[10px]">
-          <span className={`truncate text-[14px] font-semibold ${replay ? "text-[#C9CDD6]" : "text-content"}`}>{room.away}</span>
+          <span className={`truncate text-[14px] font-semibold ${replay ? "text-[rgb(var(--cc9cdd6))]" : "text-content"}`}>{room.away}</span>
           <span className="text-[22px] leading-none">{room.awayFlag}</span>
         </div>
       </div>

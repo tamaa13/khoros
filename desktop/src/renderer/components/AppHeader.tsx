@@ -5,7 +5,7 @@ import { SettingsMenu } from "./SettingsMenu";
 
 export type Tab = "agent" | "lobby";
 
-export function AppHeader({ name, tab, onTab, onRename, voice, onVoiceChange, language, onLanguageChange }: { name: string; tab: Tab; onTab: (t: Tab) => void; onRename: (n: string) => void; voice: boolean; onVoiceChange: (v: boolean) => void; language: string; onLanguageChange: (l: string) => void }) {
+export function AppHeader({ name, tab, onTab, onRename, voice, onVoiceChange, language, onLanguageChange, theme, onThemeChange }: { name: string; tab: Tab; onTab: (t: Tab) => void; onRename: (n: string) => void; voice: boolean; onVoiceChange: (v: boolean) => void; language: string; onLanguageChange: (l: string) => void; theme: "dark" | "light"; onThemeChange: (t: "dark" | "light") => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -25,27 +25,27 @@ export function AppHeader({ name, tab, onTab, onRename, voice, onVoiceChange, la
   };
 
   return (
-    <div className="relative flex-shrink-0 bg-[#0C0D11] px-4 pt-[14px]">
-      {settingsOpen && <SettingsMenu voice={voice} onVoiceChange={onVoiceChange} language={language} onLanguageChange={onLanguageChange} onClose={() => setSettingsOpen(false)} />}
+    <div className="relative flex-shrink-0 bg-[rgb(var(--c0c0d11))] px-4 pt-[14px]">
+      {settingsOpen && <SettingsMenu voice={voice} onVoiceChange={onVoiceChange} language={language} onLanguageChange={onLanguageChange} theme={theme} onThemeChange={onThemeChange} onClose={() => setSettingsOpen(false)} />}
       <div className="mb-[14px] flex items-center gap-[11px]">
         <Logo size={26} variant="simple" />
         <span className="display text-[17px]" style={{ fontVariationSettings: "'wdth' 120", letterSpacing: "-.01em" }}>
           Khoros
         </span>
-        <span className="ml-auto flex items-center gap-[7px] rounded-full border border-[#3D3621] bg-gold/[.07] py-[5px] pl-[9px] pr-[10px]">
+        <span className="ml-auto flex items-center gap-[7px] rounded-full border border-[rgb(var(--c3d3621))] bg-gold/[.07] py-[5px] pl-[9px] pr-[10px]">
           <span className="relative h-[7px] w-[7px]">
             <span className="absolute inset-0 rounded-full bg-gold animate-pulse-dot" />
           </span>
           <span className="text-[10.5px] font-semibold text-gold-bright">on-device</span>
         </span>
-        <button onClick={() => setSettingsOpen((s) => !s)} className={`flex h-[30px] w-[30px] items-center justify-center rounded-md border transition-colors ${settingsOpen ? "border-gold-deep bg-gold/[.08] text-gold" : "border-border-subtle bg-[#111217] text-content-muted hover:text-content"}`} aria-label="Settings">
+        <button onClick={() => setSettingsOpen((s) => !s)} className={`flex h-[30px] w-[30px] items-center justify-center rounded-md border transition-colors ${settingsOpen ? "border-gold-deep bg-gold/[.08] text-gold" : "border-border-subtle bg-[rgb(var(--c111217))] text-content-muted hover:text-content"}`} aria-label="Settings">
           <Settings className="h-4 w-4" strokeWidth={1.75} />
         </button>
       </div>
 
       {/* agent name chip — click to rename */}
       {editing ? (
-        <div className="mb-[14px] flex w-fit items-center gap-[8px] rounded-full border border-gold bg-[#111217] py-[6px] pl-[7px] pr-3">
+        <div className="mb-[14px] flex w-fit items-center gap-[8px] rounded-full border border-gold bg-[rgb(var(--c111217))] py-[6px] pl-[7px] pr-3">
           <AgentGlyph size={22} />
           <input
             ref={inputRef}
@@ -58,7 +58,7 @@ export function AppHeader({ name, tab, onTab, onRename, voice, onVoiceChange, la
           />
         </div>
       ) : (
-        <button onClick={() => setEditing(true)} className="mb-[14px] flex items-center gap-[8px] rounded-full border border-border-subtle bg-[#111217] py-[6px] pl-[7px] pr-[8px] text-content transition-colors hover:border-border" title="Rename your agent">
+        <button onClick={() => setEditing(true)} className="mb-[14px] flex items-center gap-[8px] rounded-full border border-border-subtle bg-[rgb(var(--c111217))] py-[6px] pl-[7px] pr-[8px] text-content transition-colors hover:border-border" title="Rename your agent">
           <AgentGlyph size={22} />
           <span className="text-[13px] font-semibold">{name}</span>
           <Pencil className="h-[13px] w-[13px] text-content-faint" strokeWidth={1.75} />
@@ -66,7 +66,7 @@ export function AppHeader({ name, tab, onTab, onRename, voice, onVoiceChange, la
       )}
 
       {/* tabs */}
-      <div className="flex gap-[4px] rounded-[13px] border border-[#1F2128] bg-[#111217] p-[4px]">
+      <div className="flex gap-[4px] rounded-[13px] border border-[rgb(var(--c1f2128))] bg-[rgb(var(--c111217))] p-[4px]">
         <TabButton active={tab === "agent"} onClick={() => onTab("agent")} icon={<MessageCircle className="h-[15px] w-[15px]" strokeWidth={1.75} />} label="My Agent" />
         <TabButton active={tab === "lobby"} onClick={() => onTab("lobby")} icon={<Users className="h-[15px] w-[15px]" strokeWidth={1.75} />} label="Lobby" />
       </div>
