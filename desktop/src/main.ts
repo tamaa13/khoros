@@ -88,6 +88,39 @@ app.whenReady().then(async () => {
     }
   });
 
+  // On-device TTS (QVAC textToSpeech). Loaded lazily the first time the user
+  // turns voice on, so it doesn't cost startup memory. synth() returns a WAV
+  // the renderer plays natively (no ffplay in the desktop).
+  let voice: any = null;
+  let voiceLoading: Promise<void> | null = null;
+  async function ensureVoice(): Promise<boolean> {
+    if (voice) return true;
+    if (!voiceLoading) {
+      send("status", "loading the on-device voice…");
+      const { Voice } = await import("../../agent/voice");
+      const v = new Voice();
+      voiceLoading = v.init().then(() => {
+        voice = v;
+      });
+    }
+    try {
+      await voiceLoading;
+      return true;
+    } catch {
+      voiceLoading = null;
+      return false;
+    }
+  }
+  ipcMain.handle("tts:speak", async (_e, text: string) => {
+    try {
+      if (!(await ensureVoice())) return { ok: false };
+      const wav = await voice.synth(text);
+      return wav ? { ok: true, wav: wav.toString("base64") } : { ok: false };
+    } catch (e: any) {
+      return { ok: false, error: String(e?.message ?? e) };
+    }
+  });
+
   // Settings (name / language / voice) — read + update, persisted to disk.
   ipcMain.handle("settings:get", () => ({ ...settings }));
   ipcMain.handle("settings:set", (_e, patch: Partial<Settings>) => {

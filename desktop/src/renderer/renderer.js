@@ -26,6 +26,19 @@ const send = document.getElementById("send");
 
 let ready = false;
 let lobbyRunning = false;
+let voiceOn = false;
+
+// On-device TTS: synth the reply in main, play the WAV here. Never throws.
+async function speakReply(text) {
+  if (!voiceOn || !text) return;
+  try {
+    const r = await window.khoros.speak(text);
+    if (r && r.ok && r.wav) {
+      const audio = new Audio("data:audio/wav;base64," + r.wav);
+      audio.play().catch(() => {});
+    }
+  } catch {}
+}
 
 // ---------- model loading + onboarding ----------
 window.khoros.onStatus((s) => {
@@ -62,6 +75,9 @@ function enterApp(name) {
   send.disabled = false;
   input.focus();
   addMessage(thread, "Halo! World Cup 2026 lagi panas. Who's your team? (type /help for commands)", "agent");
+  window.khoros.getSettings().then((s) => {
+    voiceOn = Boolean(s && s.voice);
+  }).catch(() => {});
 }
 
 function setAgentName(name) {
@@ -157,7 +173,7 @@ const HELP = [
   "/lobby — open the lobby",
   "/name <name> — rename your agent",
   "/language <lang> — reply language (e.g. /language Indonesian, /language English)",
-  "/voice on|off — spoken replies (coming soon)",
+  "/voice on|off — spoken replies (on-device TTS)",
   "/memories — what your agent remembers",
   "/recall <query> — search memory",
   "/clear — clear this chat",
@@ -194,9 +210,13 @@ async function runCommand(raw) {
       addSystem(thread, `Language set to ${isEnglish ? "English" : v}.`);
       break;
     }
-    case "voice":
-      addSystem(thread, "Voice replies are coming soon.");
+    case "voice": {
+      voiceOn = /^(on|true|1)$/i.test(arg) ? true : /^(off|false|0)$/i.test(arg) ? false : !voiceOn;
+      await window.khoros.setSettings({ voice: voiceOn });
+      addSystem(thread, voiceOn ? "🔊 Voice on — I'll speak my replies (loading the voice model the first time…)." : "🔇 Voice off.");
+      if (voiceOn) speakReply("Voice on.");
       break;
+    }
     case "memories": {
       const m = await window.khoros.memories();
       addSystem(thread, m.length ? m.map((x) => `• (${x.kind}) ${x.text}`).join("\n") : "No memories yet — tell me your takes!");
@@ -262,6 +282,7 @@ composer.addEventListener("submit", async (e) => {
   if (result.callback) badge = { kind: "gold", label: "↩ told you so" };
   else if (result.tools && result.tools.length) badge = { kind: "tool", label: `🔧 ${result.tools.join(", ")}` };
   addMessage(thread, result.reply, "agent", badge);
+  speakReply(result.reply);
 
   input.disabled = false;
   send.disabled = false;

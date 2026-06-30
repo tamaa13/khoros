@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld("khoros", {
   // settings / identity
   getSettings: () => ipcRenderer.invoke("settings:get"),
   setSettings: (patch) => ipcRenderer.invoke("settings:set", patch),
+  // on-device text-to-speech (QVAC) → returns base64 WAV
+  speak: (text) => ipcRenderer.invoke("tts:speak", text),
   // slash-command backing
   memories: () => ipcRenderer.invoke("memories"),
   recall: (q) => ipcRenderer.invoke("recall", q),
