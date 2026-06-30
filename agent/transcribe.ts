@@ -12,9 +12,11 @@ export class Listener {
     // Multilingual Whisper (auto-detects the language) so Indonesian speech
     // transcribes too. translate:false = keep the SPOKEN language (don't force
     // English) — STT should paste back exactly what was said.
+    // language:"auto" + detect_language:true = auto-detect the spoken language;
+    // translate:false = transcribe it (don't force English).
     this.modelId = await Q.loadModel({
       modelSrc: Q.WHISPER_BASE_Q8_0,
-      modelConfig: { no_timestamps: true, translate: false, detect_language: true },
+      modelConfig: { no_timestamps: true, translate: false, language: "auto", detect_language: true },
     });
   }
 
