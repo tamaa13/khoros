@@ -4,8 +4,7 @@ import { khoros } from "../khoros";
 
 const LANGS = ["English", "Indonesian", "Spanish", "French"];
 
-export function SettingsMenu({ voice, onVoiceChange, language, onClose }: { voice: boolean; onVoiceChange: (v: boolean) => void; language: string; onClose: () => void }) {
-  const [lang, setLang] = useState(language || "English");
+export function SettingsMenu({ voice, onVoiceChange, language, onLanguageChange, onClose }: { voice: boolean; onVoiceChange: (v: boolean) => void; language: string; onLanguageChange: (l: string) => void; onClose: () => void }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [evolving, setEvolving] = useState(false);
   const [evo, setEvo] = useState<Record<string, any> | null>(null);
@@ -26,10 +25,7 @@ export function SettingsMenu({ voice, onVoiceChange, language, onClose }: { voic
         ? `Evolved voice is active · ${evo.newTakes ?? 0} new takes since. It re-tunes itself when idle & charging.`
         : `${evo.total ?? 0} takes collected — it fine-tunes itself automatically when idle & charging.`;
 
-  const pickLang = (l: string) => {
-    setLang(l);
-    void khoros.setSettings({ language: /^english$/i.test(l) ? "" : l });
-  };
+  const pickLang = (l: string) => onLanguageChange(l);
 
   const tune = async () => {
     setEvolving(true);
@@ -66,7 +62,7 @@ export function SettingsMenu({ voice, onVoiceChange, language, onClose }: { voic
           </div>
           <div className="flex flex-wrap gap-[6px]">
             {LANGS.map((l) => (
-              <button key={l} onClick={() => pickLang(l)} className={`rounded-full border px-[10px] py-[5px] text-[12px] transition-colors ${lang === l ? "border-gold bg-gold/[.1] text-content" : "border-border-subtle text-content-muted hover:text-content"}`}>
+              <button key={l} onClick={() => pickLang(l)} className={`rounded-full border px-[10px] py-[5px] text-[12px] transition-colors ${(language || "English") === l ? "border-gold bg-gold/[.1] text-content" : "border-border-subtle text-content-muted hover:text-content"}`}>
                 {l}
               </button>
             ))}
