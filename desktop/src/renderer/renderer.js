@@ -15,6 +15,8 @@ const agentPanel = document.getElementById("agentPanel");
 const lobbyPanel = document.getElementById("lobbyPanel");
 const thread = document.getElementById("thread");
 const lobbyBtn = document.getElementById("lobbyBtn");
+const lobbyControls = document.getElementById("lobbyControls");
+const roomList = document.getElementById("roomList");
 const presenceList = document.getElementById("presenceList");
 const lobbyIntro = document.getElementById("lobbyIntro");
 // match room
@@ -62,6 +64,7 @@ if (lightbox) {
 
 let ready = false;
 let lobbyRunning = false;
+let roomsLoaded = false;
 let voiceOn = false;
 
 // live fine-tune progress (loss dropping) — updates a single line
@@ -162,6 +165,11 @@ function switchTab(which) {
   agentPanel.hidden = !agent;
   lobbyPanel.hidden = agent;
   composer.style.visibility = agent ? "visible" : "hidden";
+  // Load today's rooms the first time the Lobby opens (and not mid-match).
+  if (!agent && !lobbyRunning && !roomsLoaded) {
+    roomsLoaded = true;
+    loadRooms();
+  }
 }
 tabAgent.addEventListener("click", () => switchTab("agent"));
 tabLobby.addEventListener("click", () => switchTab("lobby"));
@@ -600,28 +608,65 @@ window.khoros.onLobbyEvent((ev) => {
   }
 });
 
-// start / stop the match room
-lobbyBtn.addEventListener("click", async () => {
-  if (!ready) return;
-  if (lobbyRunning) {
-    lobbyBtn.disabled = true;
-    await window.khoros.stopLobby().catch(() => {});
-    return; // the start promise resolves below and resets the button
+// ---- room picker: today's matches (live / upcoming / replay) ----
+async function loadRooms() {
+  if (!roomList) return;
+  let res;
+  try {
+    res = await window.khoros.lobbyRooms();
+  } catch {
+    res = null;
   }
+  roomList.innerHTML = "";
+  const rooms = (res && res.ok && res.rooms) || [];
+  if (!rooms.length) {
+    roomList.textContent = "no matches found right now.";
+    return;
+  }
+  for (const r of rooms) {
+    const card = document.createElement("button");
+    card.className = "room-card";
+    const tag =
+      r.state === "in" ? `<span class="room-tag live">🔴 LIVE</span>` :
+      r.state === "post" ? `<span class="room-tag">▶ replay</span>` :
+      `<span class="room-tag">⏳ ${r.kickoff || "soon"}</span>`;
+    card.innerHTML =
+      `<span class="room-teams"><span class="room-flag"></span><b class="rh"></b> v <b class="ra"></b><span class="room-flag2"></span></span>${tag}`;
+    card.querySelector(".room-flag").textContent = r.homeFlag || "🏳️";
+    card.querySelector(".room-flag2").textContent = r.awayFlag || "🏳️";
+    card.querySelector(".rh").textContent = r.home;
+    card.querySelector(".ra").textContent = r.away;
+    card.addEventListener("click", () => enterRoom(r.id));
+    roomList.appendChild(card);
+  }
+}
+
+async function enterRoom(roomId) {
+  if (lobbyRunning || !ready) return;
   lobbyRunning = true;
   if (lobbyIntro) lobbyIntro.hidden = true;
+  if (lobbyControls) lobbyControls.hidden = false;
   matchRoom.hidden = false;
   feedCol.innerHTML = "";
   agentCol.innerHTML = "";
-  lobbyBtn.textContent = "■ Stop";
+  lobbyBtn.disabled = false;
   let res;
   try {
-    res = await window.khoros.startLobby();
+    res = await window.khoros.startLobby(roomId);
   } catch (err) {
     res = { ok: false, error: err?.message ?? String(err) };
   }
   if (!res || !res.ok) addFeedNote(`match room error: ${res?.error ?? "unknown"}`);
-  lobbyBtn.disabled = false;
-  lobbyBtn.textContent = "▶ Tonton lagi";
   lobbyRunning = false;
+}
+
+// Stop → back to the room picker.
+lobbyBtn.addEventListener("click", async () => {
+  lobbyBtn.disabled = true;
+  await window.khoros.stopLobby().catch(() => {});
+  matchRoom.hidden = true;
+  if (scoreboard) scoreboard.hidden = true;
+  if (lobbyControls) lobbyControls.hidden = true;
+  if (lobbyIntro) lobbyIntro.hidden = false;
+  loadRooms();
 });

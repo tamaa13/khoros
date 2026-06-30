@@ -414,19 +414,32 @@ app.whenReady().then(async () => {
     return { ok: Boolean(relayLobby) };
   });
 
-  // The live Match Room: a real match (live or latest) drives a scoreboard, a
-  // real per-minute event feed, and two agents reacting. Streams to the renderer.
+  // The live Match Room: a real match (today's, live/upcoming, or a replay)
+  // drives a scoreboard, a real per-minute event feed, and agents watching along.
   const { Lobby } = await import("./lobby");
   let lobbyBusy = false;
   let runningLobby: any = null;
-  ipcMain.handle("lobby:start", async () => {
+  // Today's matches as rooms (live / upcoming with kickoff / replay).
+  ipcMain.handle("lobby:rooms", async () => {
+    try {
+      const { availableRooms } = await import("../../tools/football");
+      return { ok: true, rooms: await availableRooms() };
+    } catch (e: any) {
+      return { ok: false, error: String(e?.message ?? e) };
+    }
+  });
+  ipcMain.handle("lobby:start", async (_e, roomId?: string) => {
     if (lobbyBusy) return { ok: false, error: "match room already running" };
     lobbyBusy = true;
     const lobby = new Lobby(join(app.getPath("userData"), "lobby"));
     runningLobby = lobby;
     try {
-      await lobby.init((s: string) => send("lobby:status", s));
+      await lobby.init((s: string) => send("lobby:status", s), roomId);
       await lobby.run((m) => send("lobby:message", m));
+      // Save what was watched to the user's OWN agent so they can ask it to
+      // summarize the match later in the My Agent tab.
+      const recap = lobby.summary();
+      if (recap) await agent.memory.save(recap, "fact").catch(() => {});
       return { ok: true };
     } catch (e: any) {
       return { ok: false, error: String(e?.message ?? e) };

@@ -266,6 +266,22 @@ body {
 /* ============ live match room ============ */
 .lobby-controls { padding: 10px 16px; display: flex; justify-content: center; flex: 0 0 auto; }
 
+/* room picker */
+.room-list { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 320px; }
+.room-card {
+  -webkit-app-region: no-drag;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 13px; border: 1px solid var(--line-2); border-radius: 12px;
+  background: var(--surface); color: var(--text); cursor: pointer; text-align: left;
+  font-size: 13px; transition: border-color 0.15s, transform 0.1s;
+}
+.room-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.room-teams { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.room-flag, .room-flag2 { font-size: 16px; }
+.room-teams b { font-weight: 700; }
+.room-tag { font-size: 10.5px; font-weight: 700; color: var(--muted); white-space: nowrap; padding: 2px 8px; border-radius: 999px; background: rgba(6, 16, 13, 0.5); }
+.room-tag.live { color: #fff; background: #d33; }
+
 .scoreboard {
   display: flex; align-items: center; gap: 10px;
   padding: 14px 16px; flex: 0 0 auto;

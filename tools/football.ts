@@ -290,6 +290,7 @@ export interface MatchRoomData {
   homeScore: number;
   awayScore: number;
   minute: string; // display, e.g. "67'" or "FT"
+  kickoff: string; // local kickoff time (for pre-match)
   state: "pre" | "in" | "post";
   live: boolean;
   events: MatchEvent[]; // real, meaningful, minute-sorted
@@ -333,16 +334,72 @@ export async function matchRoom(eventId: string): Promise<MatchRoomData | null> 
 
     const num = (v: any) => (v === null || v === undefined || v === "" ? 0 : Number(v));
     const state: "pre" | "in" | "post" = st.state === "in" ? "in" : st.state === "post" || st.completed ? "post" : "pre";
+    const cd = comp.date ?? d.header?.competitions?.[0]?.date;
     return {
       id: eventId,
       home, away, homeFlag: flagFor(home), awayFlag: flagFor(away),
       homeScore: num(h.score), awayScore: num(a.score),
       minute: state === "post" ? "FT" : st.shortDetail ?? st.detail ?? (state === "pre" ? "—" : ""),
+      kickoff: typeof cd === "string" ? new Date(cd).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "",
       state, live: state === "in", events,
     };
   } catch {
     return null;
   }
+}
+
+export interface RoomChoice {
+  id: string;
+  home: string;
+  away: string;
+  homeFlag: string;
+  awayFlag: string;
+  state: "pre" | "in" | "post";
+  kickoff?: string; // local time for upcoming matches
+  detail: string; // ESPN short status
+  live: boolean;
+}
+
+/** The rooms a user can open: today's matches (live / upcoming / finished) plus
+ *  a replay of the most recent decided match. Real ESPN data, nothing faked. */
+export async function availableRooms(): Promise<RoomChoice[]> {
+  const out: RoomChoice[] = [];
+  try {
+    const today = await espnEvents(ymd(new Date()));
+    for (const e of today) {
+      const f = toFixture(e);
+      if (!f.id) continue;
+      const s = e.status?.type?.state;
+      out.push({
+        id: f.id,
+        home: f.home,
+        away: f.away,
+        homeFlag: flagFor(f.home),
+        awayFlag: flagFor(f.away),
+        state: s === "in" ? "in" : s === "post" ? "post" : "pre",
+        kickoff: typeof e.date === "string" ? new Date(e.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : f.time,
+        detail: f.status ?? "",
+        live: s === "in",
+      });
+    }
+  } catch {
+    /* none today */
+  }
+  // Always offer a replay of the last finished match (so there's something to watch).
+  const last = await lastDecidedMatch();
+  if (last?.id && !out.some((r) => r.id === last.id)) {
+    out.push({
+      id: last.id,
+      home: last.home,
+      away: last.away,
+      homeFlag: flagFor(last.home),
+      awayFlag: flagFor(last.away),
+      state: "post",
+      detail: "replay",
+      live: false,
+    });
+  }
+  return out;
 }
 
 /** Pick the room's match: a live one if any, else the most recent decided match. */
