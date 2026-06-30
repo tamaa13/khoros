@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { ChevronLeft, Mic, Undo2, Users } from "lucide-react";
 import { AgentGlyph } from "../Logo";
 
@@ -31,6 +32,15 @@ export interface CrewMsg {
 const CONFETTI = ["#F4C44C", "#3DA968", "#F1F2F5", "#F4C44C", "#3DA968", "#C49A33"];
 
 export function MatchRoom({ score, feed, crew, watching, goal, onBack }: { score: Score | null; feed: FeedRow[]; crew: CrewMsg[]; watching: number; goal: boolean; onBack: () => void }) {
+  const feedRef = useRef<HTMLDivElement>(null);
+  const crewRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "smooth" });
+  }, [feed]);
+  useEffect(() => {
+    crewRef.current?.scrollTo({ top: crewRef.current.scrollHeight, behavior: "smooth" });
+  }, [crew]);
+
   return (
     <div className="flex h-full flex-col">
       {/* room bar */}
@@ -77,17 +87,19 @@ export function MatchRoom({ score, feed, crew, watching, goal, onBack }: { score
         </div>
       )}
 
-      {/* feed | crew */}
-      <div className="kh-scroll flex flex-1 gap-px overflow-y-auto bg-[#1F2128]">
-        <div className="min-w-0 flex-1 bg-bg-base px-[11px] py-[13px]">
-          <Header>Match feed</Header>
-          <div className="flex flex-col gap-[8px]">
+      {/* feed | crew — each column scrolls independently with a fixed header */}
+      <div className="flex min-h-0 flex-1 gap-px bg-[#1F2128]">
+        <div className="flex min-w-0 flex-1 flex-col bg-bg-base">
+          <div className="flex-shrink-0 px-[11px] pb-2 pt-[13px]">
+            <Header>Match feed</Header>
+          </div>
+          <div ref={feedRef} className="kh-scroll flex flex-1 flex-col gap-[8px] overflow-y-auto px-[11px] pb-[13px]">
             {feed.length === 0 && <div className="px-1 text-[12px] text-content-faint">Waiting for the action…</div>}
             {feed.map((r) =>
               r.system ? (
                 <div key={r.id} className="px-1 py-1 text-center text-[11px] italic text-content-faint">{r.text}</div>
               ) : (
-                <div key={r.id} className={`flex gap-[8px] rounded-[11px] px-[10px] py-[9px] animate-rise ${r.key ? "border border-[#3A3320] bg-gold/[.1]" : "bg-[#111217]"}`}>
+                <div key={r.id} className={`flex flex-shrink-0 gap-[8px] rounded-[11px] px-[10px] py-[9px] animate-rise ${r.key ? "border border-[#3A3320] bg-gold/[.1]" : "bg-[#111217]"}`}>
                   <span className="flex-shrink-0 text-[13px]">{r.emoji || "•"}</span>
                   <div className="min-w-0">
                     <div className={`text-[11px] ${r.key ? "font-bold text-gold-bright" : "text-content-faint"}`}>{r.clock}{r.key ? " · GOAL" : ""}</div>
@@ -98,12 +110,14 @@ export function MatchRoom({ score, feed, crew, watching, goal, onBack }: { score
             )}
           </div>
         </div>
-        <div className="min-w-0 flex-1 bg-bg-base px-[11px] py-[13px]">
-          <Header>Crew</Header>
-          <div className="flex flex-col gap-[9px]">
+        <div className="flex min-w-0 flex-1 flex-col bg-bg-base">
+          <div className="flex-shrink-0 px-[11px] pb-2 pt-[13px]">
+            <Header>Crew</Header>
+          </div>
+          <div ref={crewRef} className="kh-scroll flex flex-1 flex-col gap-[9px] overflow-y-auto px-[11px] pb-[13px]">
             {crew.length === 0 && <div className="px-1 text-[12px] text-content-faint">The crew's gathering…</div>}
             {crew.map((c) => (
-              <div key={c.id} className={`rounded-[12px] border px-[10px] py-[9px] animate-rise ${c.told ? "border-[#3A3320] bg-[#100F0A]" : c.from === "Commentator" ? "border-[#1c3354] bg-[#0c1622]" : "border-surface-3 bg-[#111217]"}`}>
+              <div key={c.id} className={`flex-shrink-0 rounded-[12px] border px-[10px] py-[9px] animate-rise ${c.told ? "border-[#3A3320] bg-[#100F0A]" : c.from === "Commentator" ? "border-[#1c3354] bg-[#0c1622]" : "border-surface-3 bg-[#111217]"}`}>
                 <div className="mb-[5px] flex items-center gap-[6px]">
                   {c.from === "Commentator" ? (
                     <span className="flex h-[17px] w-[17px] flex-shrink-0 items-center justify-center rounded-full bg-[#13243a]">
