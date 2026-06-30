@@ -125,14 +125,14 @@ app.whenReady().then(async () => {
   ipcMain.handle("imagine", async (_e, prompt: string) => {
     try {
       if (!painter) {
-        send("status", "loading the on-device painter…");
+        send("status", "loading the on-device painter (FLUX.2)…");
         const { Painter } = await import("../../agent/imagine");
         painter = new Painter();
-        await painter.init();
+        await painter.init((pct: number) => send("imagine:progress", { phase: "load", pct }));
       }
-      const framed = `${prompt}, World Cup 2026, football, dramatic stadium lighting, vivid, highly detailed`;
+      const framed = `A photorealistic, hyperrealistic professional sports photograph: ${prompt}. Real footballers, the full team squad in authentic kit, packed stadium under cinematic floodlights, shot on a DSLR with an 85mm lens, ultra-detailed, 8k, sharp focus, lifelike.`;
       console.error("[imagine]", JSON.stringify(prompt).slice(0, 80));
-      const png = await painter.paint(framed);
+      const png = await painter.paint(framed, (step: number, total: number) => send("imagine:progress", { phase: "gen", step, total }));
       return png ? { ok: true, png: png.toString("base64") } : { ok: false, error: "no image produced" };
     } catch (e: any) {
       console.error("[imagine] error:", e?.message ?? e);
