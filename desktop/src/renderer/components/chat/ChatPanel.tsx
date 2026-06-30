@@ -221,7 +221,7 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange }: { name: stri
           </button>
         )}
       </div>
-      <div ref={scrollRef} className="kh-scroll flex flex-1 flex-col gap-[14px] overflow-y-auto bg-[radial-gradient(120%_60%_at_50%_0%,#0C0D11,#08090C)] px-4 pb-2 pt-[18px]">
+      <div ref={scrollRef} className="kh-scroll flex flex-1 flex-col gap-[14px] overflow-y-auto px-4 pb-2 pt-[18px]">
         {search.trim() && shown.length === 0 && <div className="mt-8 text-center text-[12.5px] text-content-faint">No messages match “{search}”.</div>}
         {shown.map((m) =>
           m.role === "user" ? (

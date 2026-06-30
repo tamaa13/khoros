@@ -74,7 +74,7 @@ export function App() {
   }, []);
 
   return (
-    <div className="flex h-full flex-col bg-bg-base text-content">
+    <div className="app-backdrop flex h-full flex-col text-content">
       <Titlebar />
       {phase === "welcome" && <Welcome onCreate={onCreate} />}
       {phase === "boot" && <Boot name={name} status={bootStatus} progress={bootProgress} />}
