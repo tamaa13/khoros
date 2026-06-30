@@ -20,7 +20,7 @@ const LLMS = {
   "4b": QWEN3_4B_INST_Q4_K_M,
   "8b": QWEN3_8B_INST_Q4_K_M,
 } as const;
-const LLM_KEY = (process.env.KHOROS_LLM ?? "8b") as keyof typeof LLMS;
+export const LLM_KEY = (process.env.KHOROS_LLM ?? "8b") as keyof typeof LLMS;
 
 export const MODELS = {
   llm: LLMS[LLM_KEY] ?? QWEN3_8B_INST_Q4_K_M, // agent brain — Apache-2.0

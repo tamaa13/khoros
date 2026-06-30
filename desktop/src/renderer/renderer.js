@@ -94,6 +94,15 @@ function enterApp(name) {
   window.khoros.getSettings().then((s) => {
     voiceOn = Boolean(s && s.voice);
   }).catch(() => {});
+  // surface the evolve state (memory-only vs evolved voice applied)
+  if (window.khoros.evolveStatus) {
+    window.khoros.evolveStatus().then((st) => {
+      if (st && st.applied) addSystem(thread, "🧬 Running your evolved voice (fine-tuned on your takes).");
+    }).catch(() => {});
+  }
+}
+if (window.khoros.onEvolveDone) {
+  window.khoros.onEvolveDone(() => addSystem(thread, "🧬 Your agent just evolved on your takes — your new voice applies next launch."));
 }
 
 function setAgentName(name) {
@@ -289,6 +298,23 @@ async function runCommand(raw) {
     }
     case "evolve":
     case "finetune": {
+      if (/^now$/i.test(arg)) {
+        ftLine = null;
+        addSystem(thread, "…tuning your agent on your own model now (watch the loss drop)");
+        const r = await window.khoros.evolveNow();
+        addSystem(thread, r && r.ok
+          ? `🧬 Evolved in ${Math.round((r.elapsedMs || 0) / 1000)}s — loss ${r.firstLoss != null ? r.firstLoss.toFixed(3) : "?"} → ${r.finalLoss != null ? r.finalLoss.toFixed(3) : "?"} (${r.status}). Restart to run your new voice.`
+          : `evolve failed: ${r && r.error ? r.error : "unknown"}`);
+        break;
+      }
+      if (/^status$/i.test(arg)) {
+        const st = await window.khoros.evolveStatus();
+        if (!st) { addSystem(thread, "evolve status unavailable"); break; }
+        addSystem(thread, st.cap && st.cap.canEvolve
+          ? `Evolve: ${st.applied ? "evolved voice ACTIVE" : "memory-only (no adapter yet)"} · ${st.newTakes} new takes (auto tune-up at ${st.ready ? "ready" : st.reason}) · ${st.total} total · RAM ${st.cap.ramGB ? st.cap.ramGB.toFixed(1) : "?"}GB`
+          : `Evolve: OFF — ${st.cap ? st.cap.reason : "memory-only"}. Memory personalization stays on.`);
+        break;
+      }
       if (/^apply$/i.test(arg)) {
         addSystem(thread, "…sampling base vs tuned (proving the adapter changes the agent)");
         const r = await window.khoros.finetuneApplyTest();

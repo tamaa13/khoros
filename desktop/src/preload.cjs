@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld("khoros", {
   finetuneSelfTest: () => ipcRenderer.invoke("finetune:selftest"),
   finetuneApplyTest: (prompt) => ipcRenderer.invoke("finetune:applytest", prompt),
   onFinetuneProgress: (cb) => ipcRenderer.on("finetune:progress", (_e, p) => cb(p)),
+  evolveStatus: () => ipcRenderer.invoke("evolve:status"),
+  evolveNow: () => ipcRenderer.invoke("evolve:now"),
+  onEvolveDone: (cb) => ipcRenderer.on("evolve:done", (_e, p) => cb(p)),
   // slash-command backing
   memories: () => ipcRenderer.invoke("memories"),
   recall: (q) => ipcRenderer.invoke("recall", q),
