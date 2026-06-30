@@ -38,7 +38,8 @@ contextBridge.exposeInMainWorld("khoros", {
   onLobbyMessage: (cb) => ipcRenderer.on("lobby:message", (_e, m) => cb(m)),
   // networked relay lobby (real agents, other devices)
   onLobbyEvent: (cb) => ipcRenderer.on("lobby:event", (_e, ev) => cb(ev)),
-  lobbySay: (text) => ipcRenderer.invoke("lobby:say", text),
+  // the in-process lounge auto-discussion runs while the Lobby tab is open
+  loungeActive: (on) => ipcRenderer.invoke("lounge:active", on),
   matches: () => ipcRenderer.invoke("matches:list"),
   debate: (label) => ipcRenderer.invoke("lobby:debate", label),
   result: (text) => ipcRenderer.invoke("lobby:result", text),

@@ -470,6 +470,13 @@ app.whenReady().then(async () => {
   const LOBBY_PASS = process.env.KHOROS_ROOM_PASS ?? "worldcup2026";
   const LOBBY_TOPIC = "World Cup 2026 is heating up — who's your pick to win it all, and why?";
   let relayLobby: any = null;
+  let lobbyPeers = 1; // relay roster size — the in-process lounge yields when ≥2
+  // Single sink for everything that lands in the Lounge feed (relay + in-process),
+  // tracking presence so the local lounge knows when real agents are around.
+  const emitLobby = (e: any) => {
+    if (e && e.type === "presence" && Array.isArray(e.peers)) lobbyPeers = e.peers.length;
+    send("lobby:event", e);
+  };
   async function connectLobby(reconnect = false): Promise<void> {
     if (!settings.agentName) return;
     if (relayLobby) {
@@ -477,7 +484,7 @@ app.whenReady().then(async () => {
       relayLobby.close?.(); // rejoin under the new name
       relayLobby = null;
     }
-    const lobby = new RelayLobby(agent, settings.agentName, RELAY_URL, LOBBY_ROOM, LOBBY_PASS, LOBBY_TOPIC, (e: unknown) => send("lobby:event", e));
+    const lobby = new RelayLobby(agent, settings.agentName, RELAY_URL, LOBBY_ROOM, LOBBY_PASS, LOBBY_TOPIC, emitLobby);
     relayLobby = lobby;
     try {
       console.error("[lobby] connecting to", RELAY_URL);
@@ -489,9 +496,25 @@ app.whenReady().then(async () => {
       send("lobby:event", { type: "status", text: "lobby offline — relay unreachable" });
     }
   }
-  ipcMain.handle("lobby:say", (_e, text: string) => {
-    relayLobby?.say?.(text);
-    return { ok: !!relayLobby };
+  // The in-process Lounge: the user's own agent + a house Pundit auto-discuss the
+  // World Cup so the lounge is alive even solo. Started when the user opens the
+  // Lobby tab, stopped when they leave (it shares the user's agent's turn-chain).
+  let lounge: any = null;
+  ipcMain.handle("lounge:active", async (_e, on: boolean) => {
+    try {
+      if (on) {
+        if (!lounge) {
+          const { Lounge } = await import("./lounge");
+          lounge = new Lounge(join(app.getPath("userData"), "lounge"), agent, () => settings.agentName ?? "You", emitLobby, () => lobbyPeers);
+        }
+        await lounge.start();
+      } else {
+        lounge?.stop();
+      }
+      return { ok: true };
+    } catch (e: any) {
+      return { ok: false, error: String(e?.message ?? e) };
+    }
   });
   void connectLobby(); // if already named, join now
 
