@@ -5,7 +5,7 @@ import { SettingsMenu } from "./SettingsMenu";
 
 export type Tab = "agent" | "lobby";
 
-export function AppHeader({ name, tab, onTab, onRename, voice, onVoiceChange, language }: { name: string; tab: Tab; onTab: (t: Tab) => void; onRename: (n: string) => void; voice: boolean; onVoiceChange: (v: boolean) => void; language: string }) {
+export function AppHeader({ name, tab, onTab, onRename, voice, onVoiceChange, language, onLanguageChange }: { name: string; tab: Tab; onTab: (t: Tab) => void; onRename: (n: string) => void; voice: boolean; onVoiceChange: (v: boolean) => void; language: string; onLanguageChange: (l: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -26,7 +26,7 @@ export function AppHeader({ name, tab, onTab, onRename, voice, onVoiceChange, la
 
   return (
     <div className="relative flex-shrink-0 bg-[#0C0D11] px-4 pt-[14px]">
-      {settingsOpen && <SettingsMenu voice={voice} onVoiceChange={onVoiceChange} language={language} onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && <SettingsMenu voice={voice} onVoiceChange={onVoiceChange} language={language} onLanguageChange={onLanguageChange} onClose={() => setSettingsOpen(false)} />}
       <div className="mb-[14px] flex items-center gap-[11px]">
         <Logo size={26} variant="simple" />
         <span className="display text-[17px]" style={{ fontVariationSettings: "'wdth' 120", letterSpacing: "-.01em" }}>

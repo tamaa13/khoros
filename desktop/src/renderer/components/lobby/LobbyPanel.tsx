@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Clock, Play, Radio } from "lucide-react";
 import { khoros, type LobbyMessage, type RoomChoice } from "../../khoros";
+import { AgentGlyph } from "../Logo";
 import { MatchRoom, type CrewMsg, type FeedRow, type Score } from "./MatchRoom";
 
 let rid = 0;
@@ -12,6 +13,8 @@ export function LobbyPanel({ active }: { active: boolean }) {
   const [feed, setFeed] = useState<FeedRow[]>([]);
   const [crew, setCrew] = useState<CrewMsg[]>([]);
   const [watching, setWatching] = useState(0);
+  const [peers, setPeers] = useState<string[]>([]);
+  const [lounge, setLounge] = useState<CrewMsg[]>([]);
   const [goal, setGoal] = useState(false);
   const totalRef = useRef(0);
   const goalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -40,9 +43,16 @@ export function LobbyPanel({ active }: { active: boolean }) {
         setFeed((f) => [...f, { id: ++rid, text: m.text ?? "", system: true }]);
       }
     });
+    // The relay lobby = cross-device agents chatting GENERALLY about the World
+    // Cup. It feeds the Lounge in the picker (presence + banter), separate from a
+    // match room's crew (which is the in-process watch-along).
     khoros.onLobbyEvent((ev) => {
-      if (ev.type === "presence") setWatching(Math.max(0, (ev.peers?.length ?? 1) - 1));
-      else if (ev.type === "message") setCrew((c) => [...c, { id: ++rid, from: ev.from ?? "agent", text: ev.text ?? "", told: ev.callback, remote: !ev.self }]);
+      if (ev.type === "presence") {
+        setPeers(ev.peers ?? []);
+        setWatching(Math.max(0, (ev.peers?.length ?? 1) - 1));
+      } else if (ev.type === "message") {
+        setLounge((l) => [...l.slice(-40), { id: ++rid, from: ev.from ?? "agent", text: ev.text ?? "", told: ev.callback, remote: !ev.self }]);
+      }
     });
   }, []);
 
@@ -69,6 +79,34 @@ export function LobbyPanel({ active }: { active: boolean }) {
 
   return (
     <div className="kh-scroll h-full overflow-y-auto px-4 py-[18px]">
+      {/* Lounge — general cross-device World Cup chatter (the relay lobby) */}
+      <div className="mb-[18px] rounded-[16px] border border-border-subtle bg-surface-0/70 p-[14px]">
+        <div className="mb-[10px] flex items-center gap-[8px]">
+          <span className="relative h-[7px] w-[7px]">
+            <span className="absolute inset-0 rounded-full bg-gold animate-pulse-dot" />
+          </span>
+          <span className="font-condensed text-[15px] uppercase tracking-[.04em] text-content">World Cup lounge</span>
+          <span className="ml-auto text-[11px] text-content-faint">{peers.length > 1 ? `${peers.length} agents online` : "just your agent"}</span>
+        </div>
+        {lounge.length === 0 ? (
+          <div className="text-[12px] leading-[1.5] text-content-faint">
+            Agents from other devices talk World Cup here{peers.length > 1 ? "." : " — the banter kicks off when another agent joins."}
+          </div>
+        ) : (
+          <div className="kh-scroll flex max-h-[180px] flex-col gap-[9px] overflow-y-auto">
+            {lounge.map((m) => (
+              <div key={m.id} className="flex gap-[7px]">
+                <AgentGlyph size={18} />
+                <div className="min-w-0">
+                  <span className="text-[11px] font-bold text-content">{m.from}</span>{" "}
+                  <span className="text-[12px] leading-[1.4] text-[#C9CDD6]">{m.text}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="mb-[14px] flex items-center justify-between">
         <span className="font-condensed text-[18px] uppercase tracking-[.04em] text-content">Today</span>
         {rooms && <span className="text-[12px] text-content-faint">{rooms.length} match{rooms.length === 1 ? "" : "es"}</span>}

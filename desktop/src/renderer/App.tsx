@@ -73,6 +73,11 @@ export function App() {
     void khoros.setSettings({ voice: v });
   }, []);
 
+  const changeLanguage = useCallback((l: string) => {
+    setLanguage(l);
+    void khoros.setSettings({ language: /^english$/i.test(l) ? "" : l });
+  }, []);
+
   return (
     <div className="app-backdrop flex h-full flex-col text-content">
       <Titlebar />
@@ -80,7 +85,7 @@ export function App() {
       {phase === "boot" && <Boot name={name} status={bootStatus} progress={bootProgress} />}
       {phase === "app" && (
         <>
-          <AppHeader name={name} tab={tab} onTab={setTab} onRename={onRename} voice={voice} onVoiceChange={changeVoice} language={language} />
+          <AppHeader name={name} tab={tab} onTab={setTab} onRename={onRename} voice={voice} onVoiceChange={changeVoice} language={language} onLanguageChange={changeLanguage} />
           <div className="relative min-h-0 flex-1">
             <div className={tab === "agent" ? "h-full" : "hidden h-full"}>
               <ChatPanel name={name} onRename={onRename} voice={voice} onVoiceChange={changeVoice} />
