@@ -92,8 +92,17 @@ export function LobbyPanel({ active }: { active: boolean }) {
   );
 }
 
+function ScoreDigit({ n, dim }: { n: number; dim: boolean }) {
+  return (
+    <span className={`display text-[18px] tabular-nums ${dim ? "text-content-muted" : "text-content"}`} style={{ fontVariationSettings: "'wdth' 125", letterSpacing: "-.02em" }}>
+      {n}
+    </span>
+  );
+}
+
 function RoomCard({ room, onClick }: { room: RoomChoice; onClick: () => void }) {
   const replay = room.state === "post";
+  const played = room.homeScore != null && room.awayScore != null;
   return (
     <button onClick={onClick} className={`rounded-[16px] border p-[15px] text-left transition-all duration-fast hover:-translate-y-[2px] ${replay ? "border-border-subtle bg-surface-0 opacity-90 hover:opacity-100" : "border-border bg-[#111217] hover:border-border-strong"} ${room.live ? "hover:shadow-[0_0_22px_-4px_rgba(209,65,80,.5)]" : ""}`}>
       <div className="mb-[13px] flex items-center justify-between">
@@ -119,13 +128,21 @@ function RoomCard({ room, onClick }: { room: RoomChoice; onClick: () => void }) 
         </span>
       </div>
       <div className="flex items-center gap-[12px]">
-        <div className="flex flex-1 items-center gap-[10px]">
+        <div className="flex min-w-0 flex-1 items-center gap-[10px]">
           <span className="text-[22px] leading-none">{room.homeFlag}</span>
-          <span className={`text-[14px] font-semibold ${replay ? "text-[#C9CDD6]" : "text-content"}`}>{room.home}</span>
+          <span className={`truncate text-[14px] font-semibold ${replay ? "text-[#C9CDD6]" : "text-content"}`}>{room.home}</span>
         </div>
-        <span className="text-[12px] font-semibold text-content-faint">vs</span>
-        <div className="flex flex-1 items-center justify-end gap-[10px]">
-          <span className={`text-[14px] font-semibold ${replay ? "text-[#C9CDD6]" : "text-content"}`}>{room.away}</span>
+        {played ? (
+          <span className="flex flex-shrink-0 items-center gap-[7px]">
+            <ScoreDigit n={room.homeScore!} dim={replay} />
+            <span className="text-[13px] text-content-faint">–</span>
+            <ScoreDigit n={room.awayScore!} dim={replay} />
+          </span>
+        ) : (
+          <span className="flex-shrink-0 text-[12px] font-semibold text-content-faint">vs</span>
+        )}
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-[10px]">
+          <span className={`truncate text-[14px] font-semibold ${replay ? "text-[#C9CDD6]" : "text-content"}`}>{room.away}</span>
           <span className="text-[22px] leading-none">{room.awayFlag}</span>
         </div>
       </div>

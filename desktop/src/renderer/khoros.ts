@@ -35,6 +35,8 @@ export interface RoomChoice {
   away: string;
   homeFlag: string;
   awayFlag: string;
+  homeScore: number | null;
+  awayScore: number | null;
   state: "pre" | "in" | "post";
   kickoff?: string;
   detail: string;
