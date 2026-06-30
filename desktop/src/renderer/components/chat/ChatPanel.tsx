@@ -8,7 +8,7 @@ import { Composer } from "./Composer";
 
 let uid = 0;
 
-export function ChatPanel({ name, onRename }: { name: string; onRename: (n: string) => void }) {
+export function ChatPanel({ name, onRename, voice, onVoiceChange }: { name: string; onRename: (n: string) => void; voice: boolean; onVoiceChange: (v: boolean) => void }) {
   const [msgs, setMsgs] = useState<ChatMsg[]>([
     { id: ++uid, role: "agent", text: `Hey — I'm ${name}. World Cup's heating up. Who's your team? (type / for commands)` },
   ]);
@@ -17,17 +17,20 @@ export function ChatPanel({ name, onRename }: { name: string; onRename: (n: stri
   const [gen, setGen] = useState<{ pct: number } | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const voiceOn = useRef(false);
+  const voiceOn = useRef(voice);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const mic = useMic(useCallback((t: string) => setInput(t), []));
+
+  useEffect(() => {
+    voiceOn.current = voice;
+  }, [voice]);
 
   useEffect(() => {
     khoros.onImagineProgress((p) => {
       const pct = p.phase === "gen" && p.total ? Math.round(((p.step ?? 0) / p.total) * 100) : p.pct;
       if (typeof pct === "number") setGen({ pct });
     });
-    khoros.getSettings().then((s) => (voiceOn.current = !!s.voice));
   }, []);
 
   useEffect(() => {
@@ -112,10 +115,11 @@ export function ChatPanel({ name, onRename }: { name: string; onRename: (n: stri
           mic.toggle();
           return;
         case "voice": {
-          voiceOn.current = /^(on|true|1)$/i.test(arg) ? true : /^(off|false|0)$/i.test(arg) ? false : !voiceOn.current;
-          await khoros.setSettings({ voice: voiceOn.current });
-          addSystem(voiceOn.current ? "🔊 Voice on — I'll speak my replies." : "🔇 Voice off.");
-          if (voiceOn.current) speakReply("Voice on.");
+          const next = /^(on|true|1)$/i.test(arg) ? true : /^(off|false|0)$/i.test(arg) ? false : !voiceOn.current;
+          voiceOn.current = next;
+          onVoiceChange(next);
+          addSystem(next ? "🔊 Voice on — I'll speak my replies." : "🔇 Voice off.");
+          if (next) speakReply("Voice on.");
           return;
         }
         case "memories": {
@@ -136,7 +140,7 @@ export function ChatPanel({ name, onRename }: { name: string; onRename: (n: stri
           return addSystem(`Unknown command: /${cmd}. Type /help.`);
       }
     },
-    [mic, onRename, push, speakReply],
+    [mic, onRename, push, speakReply, onVoiceChange],
   );
 
   const submit = useCallback(async () => {

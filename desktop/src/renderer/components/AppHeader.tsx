@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle, Pencil, Settings, Users } from "lucide-react";
 import { AgentGlyph, Logo } from "./Logo";
+import { SettingsMenu } from "./SettingsMenu";
 
 export type Tab = "agent" | "lobby";
 
-export function AppHeader({ name, tab, onTab, onRename }: { name: string; tab: Tab; onTab: (t: Tab) => void; onRename: (n: string) => void }) {
+export function AppHeader({ name, tab, onTab, onRename, voice, onVoiceChange, language }: { name: string; tab: Tab; onTab: (t: Tab) => void; onRename: (n: string) => void; voice: boolean; onVoiceChange: (v: boolean) => void; language: string }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -23,7 +25,8 @@ export function AppHeader({ name, tab, onTab, onRename }: { name: string; tab: T
   };
 
   return (
-    <div className="flex-shrink-0 bg-[#0C0D11] px-4 pt-[14px]">
+    <div className="relative flex-shrink-0 bg-[#0C0D11] px-4 pt-[14px]">
+      {settingsOpen && <SettingsMenu voice={voice} onVoiceChange={onVoiceChange} language={language} onClose={() => setSettingsOpen(false)} />}
       <div className="mb-[14px] flex items-center gap-[11px]">
         <Logo size={26} variant="simple" />
         <span className="display text-[17px]" style={{ fontVariationSettings: "'wdth' 120", letterSpacing: "-.01em" }}>
@@ -35,7 +38,7 @@ export function AppHeader({ name, tab, onTab, onRename }: { name: string; tab: T
           </span>
           <span className="text-[10.5px] font-semibold text-gold-bright">on-device</span>
         </span>
-        <button className="flex h-[30px] w-[30px] items-center justify-center rounded-md border border-border-subtle bg-[#111217] text-content-muted transition-colors hover:text-content" aria-label="Settings">
+        <button onClick={() => setSettingsOpen((s) => !s)} className={`flex h-[30px] w-[30px] items-center justify-center rounded-md border transition-colors ${settingsOpen ? "border-gold-deep bg-gold/[.08] text-gold" : "border-border-subtle bg-[#111217] text-content-muted hover:text-content"}`} aria-label="Settings">
           <Settings className="h-4 w-4" strokeWidth={1.75} />
         </button>
       </div>

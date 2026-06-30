@@ -30,6 +30,7 @@ export interface CrewMsg {
 }
 
 const CONFETTI = ["#F4C44C", "#3DA968", "#F1F2F5", "#F4C44C", "#3DA968", "#C49A33"];
+const KEY_LABEL: Record<string, string> = { "⚽": "GOAL", "🟥": "RED CARD", "🟨": "YELLOW", "🎯": "PENALTY", "🔁": "SUB", "🔄": "SUB" };
 
 export function MatchRoom({ score, feed, crew, watching, goal, onBack }: { score: Score | null; feed: FeedRow[]; crew: CrewMsg[]; watching: number; goal: boolean; onBack: () => void }) {
   const feedRef = useRef<HTMLDivElement>(null);
@@ -99,13 +100,22 @@ export function MatchRoom({ score, feed, crew, watching, goal, onBack }: { score
               r.system ? (
                 <div key={r.id} className="px-1 py-1 text-center text-[11px] italic text-content-faint">{r.text}</div>
               ) : (
-                <div key={r.id} className={`flex flex-shrink-0 gap-[8px] rounded-[11px] px-[10px] py-[9px] animate-rise ${r.key ? "border border-[#3A3320] bg-gold/[.1]" : "bg-[#111217]"}`}>
-                  <span className="flex-shrink-0 text-[13px]">{r.emoji || "•"}</span>
-                  <div className="min-w-0">
-                    <div className={`text-[11px] ${r.key ? "font-bold text-gold-bright" : "text-content-faint"}`}>{r.clock}{r.key ? " · GOAL" : ""}</div>
-                    <div className="text-[12px] leading-[1.35] text-[#C9CDD6]">{r.text}</div>
-                  </div>
-                </div>
+                (() => {
+                  const isGoal = r.emoji === "⚽";
+                  const label = r.key ? KEY_LABEL[r.emoji ?? ""] : undefined;
+                  return (
+                    <div key={r.id} className={`flex flex-shrink-0 gap-[8px] rounded-[11px] px-[10px] py-[9px] animate-rise ${isGoal ? "border border-[#3A3320] bg-gold/[.1]" : "bg-[#111217]"}`}>
+                      <span className="flex-shrink-0 text-[13px]">{r.emoji || "•"}</span>
+                      <div className="min-w-0">
+                        <div className={`text-[11px] ${isGoal ? "font-bold text-gold-bright" : label ? "font-semibold text-content-muted" : "text-content-faint"}`}>
+                          {r.clock}
+                          {label ? ` · ${label}` : ""}
+                        </div>
+                        <div className="text-[12px] leading-[1.35] text-[#C9CDD6]">{r.text}</div>
+                      </div>
+                    </div>
+                  );
+                })()
               ),
             )}
           </div>

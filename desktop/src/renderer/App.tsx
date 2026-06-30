@@ -16,6 +16,8 @@ export function App() {
   const [bootStatus, setBootStatus] = useState("Waking your agent…");
   const [bootProgress, setBootProgress] = useState<number | null>(null);
   const [tab, setTab] = useState<Tab>("agent");
+  const [voice, setVoice] = useState(false);
+  const [language, setLanguage] = useState("English");
   const decided = useRef(false);
 
   useEffect(() => {
@@ -40,6 +42,8 @@ export function App() {
       .getSettings()
       .then((s) => {
         if (s.agentName) setName(s.agentName);
+        setVoice(!!s.voice);
+        if (s.language) setLanguage(s.language);
         decide(!s.agentName);
       })
       .catch(() => {
@@ -64,6 +68,11 @@ export function App() {
     setName(trimmed);
   }, []);
 
+  const changeVoice = useCallback((v: boolean) => {
+    setVoice(v);
+    void khoros.setSettings({ voice: v });
+  }, []);
+
   return (
     <div className="flex h-full flex-col bg-bg-base text-content">
       <Titlebar />
@@ -71,10 +80,10 @@ export function App() {
       {phase === "boot" && <Boot name={name} status={bootStatus} progress={bootProgress} />}
       {phase === "app" && (
         <>
-          <AppHeader name={name} tab={tab} onTab={setTab} onRename={onRename} />
+          <AppHeader name={name} tab={tab} onTab={setTab} onRename={onRename} voice={voice} onVoiceChange={changeVoice} language={language} />
           <div className="relative min-h-0 flex-1">
             <div className={tab === "agent" ? "h-full" : "hidden h-full"}>
-              <ChatPanel name={name} onRename={onRename} />
+              <ChatPanel name={name} onRename={onRename} voice={voice} onVoiceChange={changeVoice} />
             </div>
             <div className={tab === "lobby" ? "h-full" : "hidden h-full"}>
               <LobbyPanel active={tab === "lobby"} />
