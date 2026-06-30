@@ -10,10 +10,11 @@ export class Listener {
 
   async init(): Promise<void> {
     // Multilingual Whisper (auto-detects the language) so Indonesian speech
-    // transcribes too — the English-only model hallucinated English for it.
+    // transcribes too. translate:false = keep the SPOKEN language (don't force
+    // English) — STT should paste back exactly what was said.
     this.modelId = await Q.loadModel({
       modelSrc: Q.WHISPER_BASE_Q8_0,
-      modelConfig: { no_timestamps: true },
+      modelConfig: { no_timestamps: true, translate: false },
     });
   }
 
