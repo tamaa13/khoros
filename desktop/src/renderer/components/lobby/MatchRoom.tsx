@@ -11,6 +11,7 @@ export interface Score {
   as: number;
   minute: string;
   live: boolean;
+  phase: "pre" | "in" | "post";
 }
 export interface FeedRow {
   id: number;
@@ -64,11 +65,13 @@ export function MatchRoom({ score, feed, crew, watching, goal, onBack }: { score
               <span key={i} className="absolute -top-[6px] h-[9px] w-[6px] rounded-[1px] animate-confetti" style={{ left: `${12 + i * 15}%`, background: c, animationDelay: `${i * 0.12}s` }} />
             ))}
           <div className="mb-[13px] flex items-center justify-center gap-[8px]">
-            {score.live ? (
+            {score.phase === "in" ? (
               <span className="flex items-center gap-[6px] rounded-full border border-[rgb(var(--c4d2026))] bg-live/[.15] px-[9px] py-[3px]">
                 <span className="h-[7px] w-[7px] rounded-full bg-live animate-pulse-dot" />
                 <span className="text-[10.5px] font-extrabold tracking-[.08em] text-live-bright">LIVE</span>
               </span>
+            ) : score.phase === "pre" ? (
+              <span className="rounded-full border border-gold/40 bg-gold/[.12] px-[9px] py-[3px] text-[10.5px] font-bold tracking-[.06em] text-gold-bright">UPCOMING</span>
             ) : (
               <span className="rounded-full border border-border-subtle bg-[rgb(var(--c181920))] px-[9px] py-[3px] text-[10.5px] font-bold tracking-[.06em] text-content-muted">REPLAY</span>
             )}
@@ -79,9 +82,15 @@ export function MatchRoom({ score, feed, crew, watching, goal, onBack }: { score
           <div className="flex items-center gap-[10px]">
             <Side flag={score.homeFlag} name={score.home} />
             <div className="flex flex-shrink-0 items-center gap-[8px]">
-              <ScoreNum n={score.hs} pop={goal} />
-              <span className="text-[24px] font-bold text-content-faint">–</span>
-              <ScoreNum n={score.as} pop={goal} />
+              {score.phase === "pre" ? (
+                <span className="display text-[30px] leading-none text-content-faint" style={{ fontVariationSettings: "'wdth' 110" }}>VS</span>
+              ) : (
+                <>
+                  <ScoreNum n={score.hs} pop={goal} />
+                  <span className="text-[24px] font-bold text-content-faint">–</span>
+                  <ScoreNum n={score.as} pop={goal} />
+                </>
+              )}
             </div>
             <Side flag={score.awayFlag} name={score.away} />
           </div>

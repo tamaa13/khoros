@@ -25,6 +25,7 @@ export interface LobbyMessage {
   awayScore?: number;
   minute?: string;
   live?: boolean;
+  phase?: "pre" | "in" | "post";
   clock?: string;
   emoji?: string;
   key?: boolean;
@@ -222,6 +223,7 @@ export class Lobby {
 
   private emitScore(emit: (m: LobbyMessage) => void, hs: number, as: number, minute?: string): void {
     const r = this.room!;
+    const phase: "pre" | "in" | "post" = this.live ? "in" : r.state;
     emit({
       kind: "scoreboard",
       home: r.home,
@@ -230,8 +232,10 @@ export class Lobby {
       awayFlag: r.awayFlag,
       homeScore: hs,
       awayScore: as,
-      minute: minute ?? r.minute,
+      // before kickoff, show the kickoff time instead of a match clock
+      minute: phase === "pre" ? r.kickoff || "Upcoming" : minute ?? r.minute,
       live: this.live,
+      phase,
     });
   }
 
