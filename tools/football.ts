@@ -354,6 +354,8 @@ export interface RoomChoice {
   away: string;
   homeFlag: string;
   awayFlag: string;
+  homeScore: number | null;
+  awayScore: number | null;
   state: "pre" | "in" | "post";
   kickoff?: string; // local time for upcoming matches
   detail: string; // ESPN short status
@@ -376,6 +378,8 @@ export async function availableRooms(): Promise<RoomChoice[]> {
         away: f.away,
         homeFlag: flagFor(f.home),
         awayFlag: flagFor(f.away),
+        homeScore: f.homeScore,
+        awayScore: f.awayScore,
         state: s === "in" ? "in" : s === "post" ? "post" : "pre",
         kickoff: typeof e.date === "string" ? new Date(e.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : f.time,
         detail: f.status ?? "",
@@ -394,6 +398,8 @@ export async function availableRooms(): Promise<RoomChoice[]> {
       away: last.away,
       homeFlag: flagFor(last.home),
       awayFlag: flagFor(last.away),
+      homeScore: last.homeScore,
+      awayScore: last.awayScore,
       state: "post",
       detail: "replay",
       live: false,

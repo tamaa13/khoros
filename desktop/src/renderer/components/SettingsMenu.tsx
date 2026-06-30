@@ -98,8 +98,8 @@ export function SettingsMenu({ voice, onVoiceChange, language, onClose }: { voic
 
 function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
-    <button onClick={onClick} className={`relative h-[22px] w-[38px] flex-shrink-0 rounded-full transition-colors ${on ? "bg-gold" : "bg-surface-3"}`} aria-pressed={on}>
-      <span className={`absolute top-[2px] h-[18px] w-[18px] rounded-full bg-white transition-transform ${on ? "translate-x-[18px]" : "translate-x-[2px]"}`} />
+    <button onClick={onClick} className={`relative h-[22px] w-[40px] flex-shrink-0 rounded-full border-0 p-0 transition-colors ${on ? "bg-gold" : "bg-surface-3"}`} aria-pressed={on}>
+      <span className={`absolute top-[2px] h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-all duration-base ${on ? "left-[20px]" : "left-[2px]"}`} />
     </button>
   );
 }
