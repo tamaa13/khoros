@@ -9,14 +9,12 @@ export class Listener {
   private modelId?: string;
 
   async init(): Promise<void> {
-    // Multilingual Whisper (auto-detects the language) so Indonesian speech
-    // transcribes too. translate:false = keep the SPOKEN language (don't force
-    // English) — STT should paste back exactly what was said.
-    // Multilingual Whisper, transcribe (not translate) — it auto-detects the
-    // language by default and keeps it (this loaded + produced Indonesian).
-    // detect_language:true breaks load ("must be false if language is not auto").
+    // Whisper large-v3-turbo: multilingual + far more accurate than base (much
+    // better Indonesian). translate:false keeps the SPOKEN language, auto-detects
+    // by default. (detect_language:true breaks load — "must be false if language
+    // is not auto".) Heavier (~1.5GB, downloads once) but worth it for accuracy.
     this.modelId = await Q.loadModel({
-      modelSrc: Q.WHISPER_BASE_Q8_0,
+      modelSrc: Q.WHISPER_LARGE_V3_TURBO,
       modelConfig: { no_timestamps: true, translate: false },
     });
   }
