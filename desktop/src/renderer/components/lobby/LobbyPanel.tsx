@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Clock, Play, Radio } from "lucide-react";
+import { Clock, Play, Radio, Send } from "lucide-react";
 import { khoros, type LobbyMessage, type RoomChoice } from "../../khoros";
 import { AgentGlyph } from "../Logo";
 import { MatchRoom, type CrewMsg, type FeedRow, type Score } from "./MatchRoom";
@@ -15,9 +15,22 @@ export function LobbyPanel({ active }: { active: boolean }) {
   const [watching, setWatching] = useState(0);
   const [peers, setPeers] = useState<string[]>([]);
   const [lounge, setLounge] = useState<CrewMsg[]>([]);
+  const [loungeInput, setLoungeInput] = useState("");
   const [goal, setGoal] = useState(false);
   const totalRef = useRef(0);
   const goalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loungeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    loungeRef.current?.scrollTo({ top: loungeRef.current.scrollHeight });
+  }, [lounge]);
+
+  const sayLounge = () => {
+    const t = loungeInput.trim();
+    if (!t) return;
+    void khoros.lobbySay(t);
+    setLoungeInput("");
+  };
 
   const loadRooms = useCallback(async () => {
     const r = await khoros.lobbyRooms().catch(() => null);
@@ -89,22 +102,42 @@ export function LobbyPanel({ active }: { active: boolean }) {
           <span className="ml-auto text-[11px] text-content-faint">{peers.length > 1 ? `${peers.length} agents online` : "just your agent"}</span>
         </div>
         {lounge.length === 0 ? (
-          <div className="text-[12px] leading-[1.5] text-content-faint">
-            Agents from other devices talk World Cup here{peers.length > 1 ? "." : " — the banter kicks off when another agent joins."}
+          <div className="mb-[10px] text-[12px] leading-[1.5] text-content-faint">
+            Talk World Cup with your agent{peers.length > 1 ? " and the agents online" : ""} — say anything below.
           </div>
         ) : (
-          <div className="kh-scroll flex max-h-[180px] flex-col gap-[9px] overflow-y-auto">
-            {lounge.map((m) => (
-              <div key={m.id} className="flex gap-[7px]">
-                <AgentGlyph size={18} />
-                <div className="min-w-0">
-                  <span className="text-[11px] font-bold text-content">{m.from}</span>{" "}
-                  <span className="text-[12px] leading-[1.4] text-[rgb(var(--cc9cdd6))]">{m.text}</span>
+          <div ref={loungeRef} className="kh-scroll mb-[10px] flex max-h-[200px] flex-col gap-[9px] overflow-y-auto">
+            {lounge.map((m) => {
+              const me = m.from === "You";
+              return (
+                <div key={m.id} className={`flex gap-[7px] ${me ? "flex-row-reverse" : ""}`}>
+                  {!me && <AgentGlyph size={18} />}
+                  <div className="min-w-0">
+                    <span className={`text-[11px] font-bold ${me ? "text-gold" : "text-content"}`}>{m.from}</span>{" "}
+                    <span className="text-[12px] leading-[1.4] text-[rgb(var(--cc9cdd6))]">{m.text}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            sayLounge();
+          }}
+          className="flex items-center gap-[8px] rounded-[12px] border border-border bg-surface-1 py-[6px] pl-[12px] pr-[6px]"
+        >
+          <input
+            value={loungeInput}
+            onChange={(e) => setLoungeInput(e.target.value)}
+            placeholder="Say something about the World Cup…"
+            className="min-w-0 flex-1 bg-transparent text-[12.5px] text-content outline-none placeholder:text-content-faint"
+          />
+          <button type="submit" className="flex h-[28px] w-[28px] flex-shrink-0 items-center justify-center rounded-[9px] bg-gold text-gold-fg" aria-label="Send">
+            <Send className="h-[14px] w-[14px]" strokeWidth={2} />
+          </button>
+        </form>
       </div>
 
       <div className="mb-[14px] flex items-center justify-between">

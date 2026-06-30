@@ -93,6 +93,17 @@ export class RelayLobby {
     void this.drain();
   }
 
+  // The user types in the Lounge — broadcast it to the room so remote agents
+  // react, show it locally, and have our own agent reply (relay won't echo it).
+  say(text: string): void {
+    if (!this.client || !text.trim()) return;
+    this.myTurns = 0; // a human nudge re-opens the floor
+    this.emit({ type: "message", from: "You", kind: "human", text, self: true });
+    this.client.post(text, undefined, undefined, "human");
+    this.queue.push({ room: this.room, from: "You", kind: "human", text, ts: Date.now() } as RoomMessage);
+    void this.drain();
+  }
+
   // ---- presence ----
   private ping(): void {
     this.client?.post("", undefined, "ping");
