@@ -8,14 +8,16 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        bg: { base: "#08090C" },
-        surface: { 0: "#0E0F13", 1: "#15161B", 2: "#1D1F25", 3: "#26282F" },
-        border: { subtle: "#23252D", DEFAULT: "#2F323B", strong: "#3C404A" },
-        gold: { DEFAULT: "#F4C44C", bright: "#EFCC7C", deep: "#C49A33", fg: "#1A1404" },
+        // Theme-aware tokens (resolve to CSS vars defined in index.css; swap on .light).
+        bg: { base: "rgb(var(--bg) / <alpha-value>)" },
+        surface: { 0: "rgb(var(--s0) / <alpha-value>)", 1: "rgb(var(--s1) / <alpha-value>)", 2: "rgb(var(--s2) / <alpha-value>)", 3: "rgb(var(--s3) / <alpha-value>)" },
+        border: { subtle: "rgb(var(--line) / <alpha-value>)", DEFAULT: "rgb(var(--line2) / <alpha-value>)", strong: "rgb(var(--line3) / <alpha-value>)" },
+        gold: { DEFAULT: "rgb(var(--gold) / <alpha-value>)", bright: "rgb(var(--goldbright) / <alpha-value>)", deep: "rgb(var(--golddeep) / <alpha-value>)", fg: "rgb(var(--goldfg) / <alpha-value>)" },
+        content: { DEFAULT: "rgb(var(--text) / <alpha-value>)", muted: "rgb(var(--textmuted) / <alpha-value>)", faint: "rgb(var(--textfaint) / <alpha-value>)" },
+        // Fixed accents (read fine on both themes).
         host: { mex: "#3DA968", can: "#D14150", usa: "#6E93CC" },
         live: { DEFAULT: "#D14150", bright: "#DC6471" },
         cast: "#6E93CC",
-        content: { DEFAULT: "#F1F2F5", muted: "#A2A6AF", faint: "#6C707A" },
         warn: "#D9A047",
         error: "#CF4C5A",
       },

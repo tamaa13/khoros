@@ -207,7 +207,7 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange }: { name: stri
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-shrink-0 items-center gap-2 border-b border-[#1F2128] bg-[#0C0D11] px-4 py-[7px]">
+      <div className="flex flex-shrink-0 items-center gap-2 border-b border-[rgb(var(--c1f2128))] bg-[rgb(var(--c0c0d11))] px-4 py-[7px]">
         <Search className="h-[15px] w-[15px] flex-shrink-0 text-content-faint" strokeWidth={1.75} />
         <input
           value={search}
@@ -263,11 +263,11 @@ function GeneratingBubble({ pct }: { pct: number }) {
   return (
     <div className="flex items-end gap-[10px]">
       <AgentGlyph size={28} />
-      <div className="w-[78%] overflow-hidden rounded-[16px_16px_16px_5px] border border-surface-3 bg-[#181A20]">
-        <div className="flex aspect-[4/3] flex-col items-center justify-center gap-[13px] [background:repeating-linear-gradient(115deg,#161820,#161820_11px,#121319_11px,#121319_22px)]">
+      <div className="w-[78%] overflow-hidden rounded-[16px_16px_16px_5px] border border-surface-3 bg-[rgb(var(--c181a20))]">
+        <div className="flex aspect-[4/3] flex-col items-center justify-center gap-[13px] [background:repeating-linear-gradient(115deg,rgb(var(--c161820)),rgb(var(--c161820))_11px,rgb(var(--c121319))_11px,rgb(var(--c121319))_22px)]">
           <Sparkles className="h-[26px] w-[26px] animate-pulse text-gold" />
           <span className="text-[12px] tabular-nums text-content-muted">Generating{pct ? ` · ${pct}%` : "…"}</span>
-          <span className="font-mono text-[10px] text-[#50545E]">on-device diffusion</span>
+          <span className="font-mono text-[10px] text-[rgb(var(--c50545e))]">on-device diffusion</span>
         </div>
       </div>
     </div>

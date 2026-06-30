@@ -2,6 +2,104 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Theme palette — every UI colour resolves to an RGB-triplet variable so the
+   whole app swaps dark↔light by toggling the .light class. Dark values are
+   identical to the original hardcoded colours (zero regression). */
+:root {
+  --c0c0d11: 12 13 17;
+  --c0c1622: 12 22 34;
+  --c0d0e12: 13 14 18;
+  --c0d1411: 13 20 17;
+  --c100f0a: 16 15 10;
+  --c111217: 17 18 23;
+  --c121319: 18 19 25;
+  --c13243a: 19 36 58;
+  --c14110a: 20 17 10;
+  --c161820: 22 24 32;
+  --c181920: 24 25 32;
+  --c181a20: 24 26 32;
+  --c1c3354: 28 51 84;
+  --c1f2128: 31 33 40;
+  --c22242b: 34 36 43;
+  --c2a2412: 42 36 18;
+  --c2a2d36: 42 45 54;
+  --c34373f: 52 55 63;
+  --c3a3320: 58 51 32;
+  --c3d3621: 61 54 33;
+  --c3da968: 61 169 104;
+  --c4d2026: 77 32 38;
+  --c50545e: 80 84 94;
+  --caac0de: 170 192 222;
+  --cc49a33: 196 154 51;
+  --cc9cdd6: 201 205 214;
+  --cdde0e6: 221 224 230;
+  --cf1f2f5: 241 242 245;
+  --cf3e7c4: 243 231 196;
+  --cf4c44c: 244 196 76;
+  --bg: 8 9 12;
+  --s0: 14 15 19;
+  --s1: 21 22 27;
+  --s2: 29 31 37;
+  --s3: 38 40 47;
+  --line: 35 37 45;
+  --line2: 47 50 59;
+  --line3: 60 64 74;
+  --text: 241 242 245;
+  --textmuted: 162 166 175;
+  --textfaint: 108 112 122;
+  --gold: 244 196 76;
+  --goldbright: 239 204 124;
+  --golddeep: 196 154 51;
+  --goldfg: 26 20 4;
+}
+.light {
+  --c0c0d11: 244 241 233;
+  --c0c1622: 232 239 248;
+  --c0d0e12: 251 250 246;
+  --c0d1411: 238 244 238;
+  --c100f0a: 251 243 220;
+  --c111217: 255 255 255;
+  --c121319: 244 241 233;
+  --c13243a: 197 212 232;
+  --c14110a: 232 223 200;
+  --c161820: 241 238 230;
+  --c181920: 236 232 223;
+  --c181a20: 255 255 255;
+  --c1c3354: 188 203 226;
+  --c1f2128: 226 223 214;
+  --c22242b: 240 237 228;
+  --c2a2412: 251 241 214;
+  --c2a2d36: 216 197 138;
+  --c34373f: 216 212 200;
+  --c3a3320: 230 217 168;
+  --c3d3621: 230 217 168;
+  --c3da968: 46 139 84;
+  --c4d2026: 232 184 190;
+  --c50545e: 154 149 138;
+  --caac0de: 74 111 168;
+  --cc49a33: 168 126 31;
+  --cc9cdd6: 58 62 70;
+  --cdde0e6: 35 38 44;
+  --cf1f2f5: 26 28 32;
+  --cf3e7c4: 90 74 30;
+  --cf4c44c: 201 154 46;
+  --bg: 239 236 227;
+  --s0: 251 250 246;
+  --s1: 241 238 230;
+  --s2: 232 228 217;
+  --s3: 221 216 204;
+  --line: 226 223 214;
+  --line2: 216 212 200;
+  --line3: 200 195 181;
+  --text: 26 28 32;
+  --textmuted: 90 94 102;
+  --textfaint: 138 142 150;
+  --gold: 201 154 46;
+  --goldbright: 216 173 69;
+  --golddeep: 168 126 31;
+  --goldfg: 255 247 228;
+}
+
 @layer base {
   html,
   body,
@@ -30,12 +128,24 @@
       linear-gradient(180deg, #0b0e15, #08090c 55%, #060709);
     background-attachment: fixed;
   }
+  .light .app-backdrop {
+    background:
+      radial-gradient(130% 90% at 50% -15%, rgba(201, 154, 46, 0.16), transparent 50%),
+      radial-gradient(120% 70% at 85% 112%, rgba(61, 169, 104, 0.1), transparent 55%),
+      radial-gradient(90% 60% at 8% 8%, rgba(110, 147, 204, 0.08), transparent 55%),
+      linear-gradient(180deg, #f6f2e8, #efece3 52%, #e7e2d6);
+    background-attachment: fixed;
+  }
   /* Translucent "glass" surface — sits over the backdrop. */
   .glass {
     background: rgba(14, 15, 19, 0.5);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .light .glass {
+    background: rgba(255, 255, 255, 0.62);
+    border: 1px solid rgba(255, 255, 255, 0.7);
   }
 
   /* The two Archivo display treatments from the design system. */

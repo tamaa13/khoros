@@ -12,13 +12,13 @@ export function Boot({ name, status, progress }: { name: string; status: string;
     <div className="kh-scroll flex flex-1 flex-col overflow-y-auto px-[30px] py-[36px]">
       <div className="relative mb-[24px] flex justify-center">
         <svg viewBox="0 0 120 120" width="118" height="118" className="absolute -top-[20px]">
-          <circle cx="60" cy="60" r={R} fill="none" stroke="#181920" strokeWidth="4" />
+          <circle cx="60" cy="60" r={R} fill="none" stroke="rgb(var(--c181920))" strokeWidth="4" />
           <circle
             cx="60"
             cy="60"
             r={R}
             fill="none"
-            stroke="#F4C44C"
+            stroke="rgb(var(--cf4c44c))"
             strokeWidth="4"
             strokeLinecap="round"
             strokeDasharray={C}
@@ -38,12 +38,12 @@ export function Boot({ name, status, progress }: { name: string; status: string;
       <p className="mb-[4px] text-center text-[13.5px] text-content-muted">Downloading models to your machine</p>
       <p className="mb-[26px] text-center text-[12px] text-content-faint">Happens once · stays on your device</p>
 
-      <div className="rounded-[13px] border border-border bg-[#111217] p-[15px]">
+      <div className="rounded-[13px] border border-border bg-[rgb(var(--c111217))] p-[15px]">
         <div className="mb-[11px] flex items-center justify-between gap-3">
           <span className="text-[13.5px] font-semibold text-content">{status}</span>
           {pct != null && <span className="text-[12px] font-bold tabular-nums text-gold">{Math.round(pct)}%</span>}
         </div>
-        <div className="h-[6px] overflow-hidden rounded-full bg-[#181920]">
+        <div className="h-[6px] overflow-hidden rounded-full bg-[rgb(var(--c181920))]">
           {pct != null ? (
             <div className="h-full rounded-full bg-gradient-to-r from-gold-deep to-gold shadow-[0_0_12px_rgba(244,196,76,.6)] transition-[width] duration-slow ease-enter" style={{ width: `${pct}%` }} />
           ) : (

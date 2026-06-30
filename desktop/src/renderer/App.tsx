@@ -18,7 +18,17 @@ export function App() {
   const [tab, setTab] = useState<Tab>("agent");
   const [voice, setVoice] = useState(false);
   const [language, setLanguage] = useState("English");
+  const [theme, setTheme] = useState<"dark" | "light">(() => (typeof localStorage !== "undefined" && localStorage.getItem("khoros.theme") === "light" ? "light" : "dark"));
   const decided = useRef(false);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("light", theme === "light");
+    try {
+      localStorage.setItem("khoros.theme", theme);
+    } catch {
+      /* ignore */
+    }
+  }, [theme]);
 
   useEffect(() => {
     // IPC handlers register only after the (slow) agent init, so the first
@@ -85,7 +95,7 @@ export function App() {
       {phase === "boot" && <Boot name={name} status={bootStatus} progress={bootProgress} />}
       {phase === "app" && (
         <>
-          <AppHeader name={name} tab={tab} onTab={setTab} onRename={onRename} voice={voice} onVoiceChange={changeVoice} language={language} onLanguageChange={changeLanguage} />
+          <AppHeader name={name} tab={tab} onTab={setTab} onRename={onRename} voice={voice} onVoiceChange={changeVoice} language={language} onLanguageChange={changeLanguage} theme={theme} onThemeChange={setTheme} />
           <div className="relative min-h-0 flex-1">
             <div className={tab === "agent" ? "h-full" : "hidden h-full"}>
               <ChatPanel name={name} onRename={onRename} voice={voice} onVoiceChange={changeVoice} />

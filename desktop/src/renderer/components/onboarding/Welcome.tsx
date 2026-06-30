@@ -32,7 +32,7 @@ export function Welcome({ onCreate }: { onCreate: (name: string, lang: string) =
       </p>
 
       <label className="mb-[9px] block text-[11px] font-bold uppercase tracking-[.1em] text-content-faint">Agent name</label>
-      <div className="mb-[12px] flex items-center gap-[10px] rounded-lg border border-gold bg-[#0D1411] px-4 py-[14px] shadow-[0_0_0_3px_rgba(244,196,76,.12)]">
+      <div className="mb-[12px] flex items-center gap-[10px] rounded-lg border border-gold bg-[rgb(var(--c0d1411))] px-4 py-[14px] shadow-[0_0_0_3px_rgba(244,196,76,.12)]">
         <MessageCircle className="h-[18px] w-[18px] text-gold" strokeWidth={1.75} />
         <input
           value={name}
@@ -50,7 +50,7 @@ export function Welcome({ onCreate }: { onCreate: (name: string, lang: string) =
             key={s}
             onClick={() => setName(s)}
             className={`rounded-full border px-3 py-[6px] text-[12px] transition-colors duration-fast ${
-              name === s ? "border-border-subtle bg-[#111217] text-content-muted" : "border-[#1F2128] text-content-faint hover:text-content-muted"
+              name === s ? "border-border-subtle bg-[rgb(var(--c111217))] text-content-muted" : "border-[rgb(var(--c1f2128))] text-content-faint hover:text-content-muted"
             }`}
           >
             {s}
@@ -77,7 +77,7 @@ export function Welcome({ onCreate }: { onCreate: (name: string, lang: string) =
         })}
       </div>
 
-      <div className="mb-[26px] flex gap-[13px] rounded-lg border border-[#3A3320] bg-gradient-to-r from-gold/[.06] to-transparent p-4">
+      <div className="mb-[26px] flex gap-[13px] rounded-lg border border-[rgb(var(--c3a3320))] bg-gradient-to-r from-gold/[.06] to-transparent p-4">
         <ShieldCheck className="mt-[1px] h-5 w-5 flex-shrink-0 text-gold" strokeWidth={1.75} />
         <div>
           <div className="mb-[4px] text-[13px] font-semibold text-content">Private by design</div>
