@@ -114,7 +114,7 @@ export interface KhorosAPI {
   onLobbyStatus(cb: (s: string) => void): void;
   onLobbyMessage(cb: (m: LobbyMessage) => void): void;
   onLobbyEvent(cb: (ev: LobbyEvent) => void): void;
-  lobbySay(text: string): Promise<OkResult>;
+  loungeActive(on: boolean): Promise<OkResult>;
   matches(): Promise<unknown>;
   debate(label: string): Promise<unknown>;
   result(text: string): Promise<unknown>;

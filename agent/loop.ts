@@ -35,6 +35,9 @@ export interface TurnOptions {
   // Let the agent call football tools this turn. Off in the lobby so agents opine
   // instead of looking up (and spoiling) a result the commentator will reveal.
   useTools?: boolean;
+  // Don't persist this turn to memory at all. For the always-on Lounge banter,
+  // whose internal prompts would otherwise pollute the user's agent memory.
+  ephemeral?: boolean;
 }
 
 // A callback only makes sense when the new message actually reports an outcome —
@@ -116,9 +119,9 @@ export class Agent {
       opts.useTools ?? true,
     );
 
-    await this.memory.save(userText, "chat");
+    if (!opts.ephemeral) await this.memory.save(userText, "chat");
     let prediction: string | null = null;
-    if (opts.learnPredictions ?? true) {
+    if (!opts.ephemeral && (opts.learnPredictions ?? true)) {
       prediction = await this.brain.extractPrediction(userText);
       if (prediction) await this.memory.save(prediction, "prediction");
     }

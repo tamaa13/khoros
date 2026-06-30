@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Clock, Play, Radio, Send } from "lucide-react";
+import { Clock, Play, Radio } from "lucide-react";
 import { khoros, type LobbyMessage, type RoomChoice } from "../../khoros";
 import { AgentGlyph } from "../Logo";
 import { MatchRoom, type CrewMsg, type FeedRow, type Score } from "./MatchRoom";
@@ -15,7 +15,6 @@ export function LobbyPanel({ active }: { active: boolean }) {
   const [watching, setWatching] = useState(0);
   const [peers, setPeers] = useState<string[]>([]);
   const [lounge, setLounge] = useState<CrewMsg[]>([]);
-  const [loungeInput, setLoungeInput] = useState("");
   const [goal, setGoal] = useState(false);
   const totalRef = useRef(0);
   const goalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -25,12 +24,15 @@ export function LobbyPanel({ active }: { active: boolean }) {
     loungeRef.current?.scrollTo({ top: loungeRef.current.scrollHeight });
   }, [lounge]);
 
-  const sayLounge = () => {
-    const t = loungeInput.trim();
-    if (!t) return;
-    void khoros.lobbySay(t);
-    setLoungeInput("");
-  };
+  // The Lounge auto-discussion (the user's agent + a house pundit) only runs
+  // while the user is actually looking at the picker — pause it otherwise.
+  useEffect(() => {
+    const on = active && view === "picker";
+    void khoros.loungeActive(on);
+    return () => {
+      if (on) void khoros.loungeActive(false);
+    };
+  }, [active, view]);
 
   const loadRooms = useCallback(async () => {
     const r = await khoros.lobbyRooms().catch(() => null);
@@ -92,52 +94,39 @@ export function LobbyPanel({ active }: { active: boolean }) {
 
   return (
     <div className="kh-scroll h-full overflow-y-auto px-4 py-[18px]">
-      {/* Lounge — general cross-device World Cup chatter (the relay lobby) */}
+      {/* Lounge — the society of agents talking World Cup on its own (the user's
+          own agent + a house pundit, plus real agents from other devices). Not a
+          user chat box — you watch the agents discuss. */}
       <div className="mb-[18px] rounded-[16px] border border-border-subtle bg-surface-0/70 p-[14px]">
         <div className="mb-[10px] flex items-center gap-[8px]">
           <span className="relative h-[7px] w-[7px]">
             <span className="absolute inset-0 rounded-full bg-gold animate-pulse-dot" />
           </span>
           <span className="font-condensed text-[15px] uppercase tracking-[.04em] text-content">World Cup lounge</span>
-          <span className="ml-auto text-[11px] text-content-faint">{peers.length > 1 ? `${peers.length} agents online` : "just your agent"}</span>
+          <span className="ml-auto text-[11px] text-content-faint">{peers.length > 1 ? `${peers.length} agents` : "agents talking"}</span>
         </div>
         {lounge.length === 0 ? (
-          <div className="mb-[10px] text-[12px] leading-[1.5] text-content-faint">
-            Talk World Cup with your agent{peers.length > 1 ? " and the agents online" : ""} — say anything below.
+          <div className="flex items-center gap-[7px] text-[12px] leading-[1.5] text-content-faint">
+            <span className="flex gap-[3px]">
+              <span className="h-[5px] w-[5px] animate-bounce rounded-full bg-content-faint [animation-delay:-0.3s]" />
+              <span className="h-[5px] w-[5px] animate-bounce rounded-full bg-content-faint [animation-delay:-0.15s]" />
+              <span className="h-[5px] w-[5px] animate-bounce rounded-full bg-content-faint" />
+            </span>
+            Your agent and the lounge are warming up…
           </div>
         ) : (
-          <div ref={loungeRef} className="kh-scroll mb-[10px] flex max-h-[200px] flex-col gap-[9px] overflow-y-auto">
-            {lounge.map((m) => {
-              const me = m.from === "You";
-              return (
-                <div key={m.id} className={`flex gap-[7px] ${me ? "flex-row-reverse" : ""}`}>
-                  {!me && <AgentGlyph size={18} />}
-                  <div className="min-w-0">
-                    <span className={`text-[11px] font-bold ${me ? "text-gold" : "text-content"}`}>{m.from}</span>{" "}
-                    <span className="text-[12px] leading-[1.4] text-[rgb(var(--cc9cdd6))]">{m.text}</span>
-                  </div>
+          <div ref={loungeRef} className="kh-scroll flex max-h-[230px] flex-col gap-[9px] overflow-y-auto">
+            {lounge.map((m) => (
+              <div key={m.id} className="flex gap-[7px]">
+                <AgentGlyph size={18} />
+                <div className="min-w-0">
+                  <span className="text-[11px] font-bold text-content">{m.from}</span>{" "}
+                  <span className="text-[12px] leading-[1.4] text-[rgb(var(--cc9cdd6))]">{m.text}</span>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            sayLounge();
-          }}
-          className="flex items-center gap-[8px] rounded-[12px] border border-border bg-surface-1 py-[6px] pl-[12px] pr-[6px]"
-        >
-          <input
-            value={loungeInput}
-            onChange={(e) => setLoungeInput(e.target.value)}
-            placeholder="Say something about the World Cup…"
-            className="min-w-0 flex-1 bg-transparent text-[12.5px] text-content outline-none placeholder:text-content-faint"
-          />
-          <button type="submit" className="flex h-[28px] w-[28px] flex-shrink-0 items-center justify-center rounded-[9px] bg-gold text-gold-fg" aria-label="Send">
-            <Send className="h-[14px] w-[14px]" strokeWidth={2} />
-          </button>
-        </form>
       </div>
 
       <div className="mb-[14px] flex items-center justify-between">
