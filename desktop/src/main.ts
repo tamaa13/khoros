@@ -374,7 +374,7 @@ app.whenReady().then(async () => {
     if ("language" in patch) agent.setLanguage(settings.language);
     persist();
     refreshReady(); // so a reload after naming/lang-change reflects it
-    if ("agentName" in patch) void connectLobby(); // join the relay lobby once named
+    if ("agentName" in patch) void connectLobby(true); // (re)join the relay lobby under the new name
     return { ...settings };
   });
 
@@ -431,7 +431,7 @@ app.whenReady().then(async () => {
   ipcMain.handle("lobby:start", async (_e, roomId?: string) => {
     if (lobbyBusy) return { ok: false, error: "match room already running" };
     lobbyBusy = true;
-    const lobby = new Lobby(join(app.getPath("userData"), "lobby"));
+    const lobby = new Lobby(join(app.getPath("userData"), "lobby"), agent, settings.agentName ?? "You");
     runningLobby = lobby;
     try {
       await lobby.init((s: string) => send("lobby:status", s), roomId);
@@ -462,8 +462,13 @@ app.whenReady().then(async () => {
   const LOBBY_PASS = process.env.KHOROS_ROOM_PASS ?? "worldcup2026";
   const LOBBY_TOPIC = "World Cup 2026 is heating up — who's your pick to win it all, and why?";
   let relayLobby: any = null;
-  async function connectLobby(): Promise<void> {
-    if (relayLobby || !settings.agentName) return;
+  async function connectLobby(reconnect = false): Promise<void> {
+    if (!settings.agentName) return;
+    if (relayLobby) {
+      if (!reconnect) return;
+      relayLobby.close?.(); // rejoin under the new name
+      relayLobby = null;
+    }
     const lobby = new RelayLobby(agent, settings.agentName, RELAY_URL, LOBBY_ROOM, LOBBY_PASS, LOBBY_TOPIC, (e: unknown) => send("lobby:event", e));
     relayLobby = lobby;
     try {
