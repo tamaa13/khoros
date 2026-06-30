@@ -524,6 +524,7 @@ composer.addEventListener("submit", async (e) => {
 const SPEAKERS = {
   Dewi: { glyph: "🟢", cls: "spk-dewi" },
   Rian: { glyph: "🔵", cls: "spk-rian" },
+  Budi: { glyph: "🟡", cls: "spk-budi" },
 };
 
 function updateScoreboard(m) {
