@@ -49,7 +49,12 @@ export type MicStatus = "idle" | "listening" | "transcribing";
 /** On-device voice input: capture mic at 16 kHz mono, transcribe via Whisper. */
 export function useMic(onTranscript: (text: string) => void) {
   const [status, setStatus] = useState<MicStatus>("idle");
+  const statusRef = useRef<MicStatus>("idle");
   const ref = useRef<MicState | null>(null);
+  const set = useCallback((s: MicStatus) => {
+    statusRef.current = s;
+    setStatus(s);
+  }, []);
 
   const stop = useCallback(async () => {
     const m = ref.current;
@@ -64,7 +69,7 @@ export function useMic(onTranscript: (text: string) => void) {
     }
     const len = m.chunks.reduce((a, c) => a + c.length, 0);
     if (len < m.rate * 0.3) {
-      setStatus("idle");
+      set("idle");
       return;
     }
     const all = new Float32Array(len);
@@ -73,11 +78,11 @@ export function useMic(onTranscript: (text: string) => void) {
       all.set(c, off);
       off += c.length;
     }
-    setStatus("transcribing");
+    set("transcribing");
     const r = await khoros.transcribe(u8ToBase64(encodeWav(all, m.rate)));
-    setStatus("idle");
+    set("idle");
     if (r?.ok && r.text) onTranscript(r.text);
-  }, [onTranscript]);
+  }, [onTranscript, set]);
 
   const start = useCallback(async () => {
     try {
@@ -96,13 +101,14 @@ export function useMic(onTranscript: (text: string) => void) {
       srcNode.connect(node);
       node.connect(mute);
       mute.connect(ctx.destination);
-      setStatus("listening");
+      set("listening");
     } catch {
-      setStatus("idle");
+      set("idle");
     }
-  }, []);
+  }, [set]);
 
   const toggle = useCallback(() => {
+    if (statusRef.current === "transcribing") return; // don't start a new take mid-transcribe
     if (ref.current) void stop();
     else void start();
   }, [start, stop]);
