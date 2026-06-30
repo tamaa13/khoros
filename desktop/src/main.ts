@@ -64,7 +64,7 @@ app.whenReady().then(async () => {
   // Import the agent core after env + app are ready (and lazily, so the model
   // load doesn't block window creation).
   const { Agent } = await import("../../agent/loop");
-  const { getFixtures, todayMatches, lastDecidedMatch } = await import("../../tools/football");
+  const { getFixtures, todayMatches, lastDecidedMatch, referenceImage } = await import("../../tools/football");
   const { EvolveManager } = await import("../../agent/evolve");
   const agent = new Agent();
 
@@ -154,16 +154,29 @@ app.whenReady().then(async () => {
   ipcMain.handle("imagine", async (_e, prompt: string) => {
     try {
       if (!painter) {
-        send("status", "loading the on-device painter (FLUX.2)…");
         const { Painter } = await import("../../agent/imagine");
         painter = new Painter();
-        await painter.init((pct: number) => send("imagine:progress", { phase: "load", pct }));
       }
+      const onStep = (step: number, total: number) => send("imagine:progress", { phase: "gen", step, total });
+      const onLoad = (pct: number) => send("imagine:progress", { phase: "load", pct });
+      // Ground on a REAL TheSportsDB photo when we can (accurate face/kit), then
+      // img2img it. Query: a known team in the prompt, else its leading words.
+      const teamHits = Object.keys(TEAM_KITS).filter((t) => prompt.toLowerCase().includes(t));
+      const query = teamHits[0] ?? prompt.split(/[,.!?]/)[0].split(/\s+/).slice(0, 2).join(" ");
+      send("status", "looking up a real reference photo…");
+      const ref = await referenceImage(query, Boolean(teamHits[0])).catch(() => null);
       const kit = kitFor(prompt);
-      const framed = `A photorealistic, hyperrealistic professional sports photograph: ${prompt}.${kit ? ` Accurate kits: ${kit}.` : ""} Real adult male footballers, the full team squad in authentic modern kit, packed stadium under cinematic floodlights, shot on a DSLR with an 85mm lens, ultra-detailed faces, 8k, sharp focus, lifelike, photojournalism.`;
-      console.error("[imagine]", JSON.stringify(prompt).slice(0, 80));
-      const png = await painter.paint(framed, (step: number, total: number) => send("imagine:progress", { phase: "gen", step, total }));
-      return png ? { ok: true, png: png.toString("base64") } : { ok: false, error: "no image produced" };
+      let png: Buffer | null;
+      if (ref) {
+        const scene = `${prompt}. ${ref.name}, real footballers in authentic kit, celebrating, packed stadium, confetti, dramatic floodlights, photorealistic, sharp focus, 8k.`;
+        console.error("[imagine] img2img grounded on", ref.kind, ref.name, "via", ref.via);
+        png = await painter.paintFrom(ref.bytes, scene, onStep, onLoad);
+        return png ? { ok: true, png: png.toString("base64"), grounded: true, source: `${ref.kind} photo: ${ref.name}` } : { ok: false, error: "no image produced" };
+      }
+      const framed = `A photorealistic professional sports photograph: ${prompt}.${kit ? ` Accurate kits: ${kit}.` : ""} Real adult male footballers, full squad in authentic modern kit, packed stadium under cinematic floodlights, DSLR, 8k, sharp focus, lifelike, photojournalism.`;
+      console.error("[imagine] text2img (no reference for):", JSON.stringify(query));
+      png = await painter.paint(framed, onStep, onLoad);
+      return png ? { ok: true, png: png.toString("base64"), grounded: false, source: null } : { ok: false, error: "no image produced" };
     } catch (e: any) {
       console.error("[imagine] error:", e?.message ?? e);
       return { ok: false, error: String(e?.message ?? e) };

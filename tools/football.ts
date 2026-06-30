@@ -20,6 +20,62 @@ export interface Fixture {
   city?: string;
 }
 
+async function dl(url: string): Promise<Buffer | null> {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(20000) });
+    if (!r.ok) return null;
+    return Buffer.from(await r.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+export interface ImageRef {
+  bytes: Buffer;
+  kind: "player" | "team";
+  name: string;
+  via: string; // which image field grounded it
+}
+
+async function playerRef(q: string): Promise<ImageRef | null> {
+  try {
+    const r = await fetch(`${BASE}/searchplayers.php?p=${q}`, { signal: AbortSignal.timeout(15000) });
+    const p = (await r.json().catch(() => ({} as any)))?.player?.[0];
+    // Prefer the JPEG thumb (RGB) over the cutout (RGBA PNG) — sdcpp wants RGB.
+    const url = p?.strThumb || p?.strRender || p?.strCutout;
+    if (url) {
+      const b = await dl(url);
+      if (b) return { bytes: b, kind: "player", name: p.strPlayer, via: p.strThumb ? "thumb" : "render" };
+    }
+  } catch {
+    /* none */
+  }
+  return null;
+}
+async function teamRef(q: string): Promise<ImageRef | null> {
+  try {
+    const r = await fetch(`${BASE}/searchteams.php?t=${q}`, { signal: AbortSignal.timeout(15000) });
+    const t = (await r.json().catch(() => ({} as any)))?.teams?.[0];
+    const url = t?.strFanart1 || t?.strEquipment || t?.strBadge;
+    if (url) {
+      const b = await dl(url);
+      if (b) return { bytes: b, kind: "team", name: t.strTeam, via: t?.strFanart1 ? "fanart" : t?.strEquipment ? "jersey" : "badge" };
+    }
+  } catch {
+    /* none */
+  }
+  return null;
+}
+
+/** A real reference image (player cutout = real face+kit, or team fanart/jersey)
+ *  from TheSportsDB, for img2img grounding. `preferTeam` searches the team first
+ *  (so "Brazil" → the team, not a player whose surname is "Brazill"). */
+export async function referenceImage(query: string, preferTeam = false): Promise<ImageRef | null> {
+  const q = encodeURIComponent(query.trim());
+  if (!q) return null;
+  return preferTeam ? (await teamRef(q)) ?? (await playerRef(q)) : (await playerRef(q)) ?? (await teamRef(q));
+}
+
 async function fetchEvents(path: string): Promise<any[]> {
   const res = await fetch(`${BASE}/${path}`, { signal: AbortSignal.timeout(15000) });
   if (!res.ok) throw new Error(`TheSportsDB HTTP ${res.status}`);
