@@ -120,6 +120,26 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle("evolve:status", () => ({ ...evolve.status(), applied: Boolean(adapter), cap: evolve.capability() }));
 
+  // On-device image generation (QVAC Stable Diffusion). Lazy-loaded painter.
+  let painter: any = null;
+  ipcMain.handle("imagine", async (_e, prompt: string) => {
+    try {
+      if (!painter) {
+        send("status", "loading the on-device painter…");
+        const { Painter } = await import("../../agent/imagine");
+        painter = new Painter();
+        await painter.init();
+      }
+      const framed = `${prompt}, World Cup 2026, football, dramatic stadium lighting, vivid, highly detailed`;
+      console.error("[imagine]", JSON.stringify(prompt).slice(0, 80));
+      const png = await painter.paint(framed);
+      return png ? { ok: true, png: png.toString("base64") } : { ok: false, error: "no image produced" };
+    } catch (e: any) {
+      console.error("[imagine] error:", e?.message ?? e);
+      return { ok: false, error: String(e?.message ?? e) };
+    }
+  });
+
   // On-device TTS (QVAC textToSpeech). Loaded lazily the first time the user
   // turns voice on, so it doesn't cost startup memory. synth() returns a WAV
   // the renderer plays natively (no ffplay in the desktop).
