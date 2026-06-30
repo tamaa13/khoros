@@ -20,6 +20,9 @@ export interface InitOptions {
   onStatus?: (status: string) => void;
   // Model-download progress (first run pulls ~GB). `model` names which one.
   onProgress?: (p: { model: string; percentage?: number }) => void;
+  // Path to a LoRA adapter (.gguf) trained on the user's takes — applied so the
+  // agent argues in their voice. Only the "evolve" pipeline sets this.
+  loraPath?: string;
 }
 
 export interface TurnOptions {
@@ -65,8 +68,8 @@ export class Agent {
     const prog = opts.onProgress;
     status("loading memory + embeddings…");
     await this.memory.init(prog ? (p) => prog({ model: "memory", percentage: p.percentage }) : undefined);
-    status("loading language model…");
-    await this.brain.init(prog ? (p) => prog({ model: "brain", percentage: p.percentage }) : undefined);
+    status(opts.loraPath ? "loading your evolved model…" : "loading language model…");
+    await this.brain.init(prog ? (p) => prog({ model: "brain", percentage: p.percentage }) : undefined, opts.loraPath);
     if (opts.voice) {
       this.voice = new Voice();
       status("loading voice…");

@@ -89,12 +89,12 @@ export class Brain {
     this.language = language && language.trim() ? language.trim() : undefined;
   }
 
-  async init(onProgress?: (p: { percentage?: number }) => void): Promise<void> {
-    this.modelId = await loadModel({
-      modelSrc: MODELS.llm,
-      modelConfig: { ctx_size: LLM_CTX_SIZE, tools: true },
-      onProgress,
-    });
+  // A LoRA adapter (path to .gguf) trained on the user's takes — applied so the
+  // agent argues in their voice. Optional; only set when evolve has run.
+  async init(onProgress?: (p: { percentage?: number }) => void, loraPath?: string): Promise<void> {
+    const modelConfig: any = { ctx_size: LLM_CTX_SIZE, tools: true };
+    if (loraPath) modelConfig.lora = loraPath;
+    this.modelId = await loadModel({ modelSrc: MODELS.llm, modelConfig, onProgress });
   }
 
   private id(): string {

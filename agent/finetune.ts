@@ -51,15 +51,19 @@ export class Trainer {
     }
   }
 
-  async train(jsonlPath: string, evalPath: string, outDir: string, onProgress?: (p: TuneProgress) => void): Promise<TuneOutcome> {
+  async train(
+    jsonlPath: string,
+    evalPath: string,
+    outDir: string,
+    onProgress?: (p: TuneProgress) => void,
+    modelSrc: any = Q.QWEN3_600M_INST_Q4,
+  ): Promise<TuneOutcome> {
     mkdirSync(outDir, { recursive: true });
     mkdirSync(`${outDir}/ckpt`, { recursive: true });
     const t0 = Date.now();
-    // A 600M base keeps training feasible on-device.
-    const modelId = await Q.loadModel({
-      modelSrc: Q.QWEN3_600M_INST_Q4,
-      modelConfig: { device: "gpu", ctx_size: 512 },
-    });
+    // Defaults to 600M (fast self-test); the evolve pipeline passes the agent's
+    // own model so the trained adapter applies to the real agent.
+    const modelId = await Q.loadModel({ modelSrc, modelConfig: { device: "gpu", ctx_size: 512 } });
     let firstLoss: number | undefined;
     let finalLoss: number | undefined;
     try {

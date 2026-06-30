@@ -3,7 +3,7 @@
  * the CLI uses) in Node and bridges it to a chat window over IPC. Nothing leaves
  * the machine: the LLM, memory embeddings, and tools all run locally.
  */
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, powerMonitor } from "electron";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -65,13 +65,20 @@ app.whenReady().then(async () => {
   // load doesn't block window creation).
   const { Agent } = await import("../../agent/loop");
   const { getFixtures, todayMatches, lastDecidedMatch } = await import("../../tools/football");
+  const { EvolveManager } = await import("../../agent/evolve");
   const agent = new Agent();
+
+  // The evolve layer: collect takes + (when capable + idle) fine-tune the agent's
+  // own model. If a model-matched adapter already exists, apply it on load.
+  const evolve = new EvolveManager(join(app.getPath("userData"), "evolve"));
+  const adapter = evolve.adapterPath();
+  if (adapter) console.error("[evolve] applying adapter:", adapter);
 
   send("status", "loading the on-device model… (first run downloads it once)");
   try {
     // No onProgress: it hangs the Bare worker under Electron. The renderer shows
     // an indeterminate "downloading the model…" state from onStatus instead.
-    await agent.init({ onStatus: (s: string) => send("status", s) });
+    await agent.init({ onStatus: (s: string) => send("status", s), loraPath: adapter });
     agent.setLanguage(settings.language);
     refreshReady();
     send("ready", readyPayload);
@@ -80,14 +87,38 @@ app.whenReady().then(async () => {
     return;
   }
 
+  // Background style tune-up: automatic, but well-behaved — only when the device
+  // can train, there's enough fresh material, the user is idle, and (on a laptop)
+  // plugged in. No /learn chore; potato machines/large models never reach here.
+  let evolving = false;
+  setInterval(async () => {
+    if (evolving || !evolve.status().ready) return;
+    if (powerMonitor.getSystemIdleTime() < 90 || powerMonitor.isOnBatteryPower()) return;
+    evolving = true;
+    send("status", "your agent is quietly learning your style…");
+    try {
+      const res = await evolve.maybeEvolve((p) => send("finetune:progress", p));
+      if (res.trained) {
+        console.error("[evolve] trained:", JSON.stringify(res.outcome));
+        send("evolve:done", { applied: true });
+      }
+    } catch (e: any) {
+      console.error("[evolve] error:", e?.message ?? e);
+    } finally {
+      evolving = false;
+    }
+  }, 60_000);
+
   ipcMain.handle("ask", async (_e, text: string) => {
     try {
       const { reply, callback, tools } = await agent.turn(text);
+      evolve.recordTake(text); // grow the training set from the user's takes
       return { reply, callback, tools };
     } catch (e: any) {
       return { reply: `(error: ${e?.message ?? e})`, callback: null, tools: [] };
     }
   });
+  ipcMain.handle("evolve:status", () => ({ ...evolve.status(), applied: Boolean(adapter), cap: evolve.capability() }));
 
   // On-device TTS (QVAC textToSpeech). Loaded lazily the first time the user
   // turns voice on, so it doesn't cost startup memory. synth() returns a WAV
@@ -219,6 +250,25 @@ app.whenReady().then(async () => {
       return { ok: true, prompt, base, tuned };
     } catch (e: any) {
       console.error("[finetune] applytest error:", e?.message ?? e);
+      return { ok: false, error: String(e?.message ?? e) };
+    }
+  });
+  // Force a real tune-up NOW on the AGENT's own model (the production path).
+  ipcMain.handle("evolve:now", async () => {
+    try {
+      send("status", "fine-tuning your agent on your takes…");
+      const res = await evolve.forceEvolve(FT_EXAMPLES, (p) => {
+        console.error(`[evolve] epoch=${p.epoch} step=${p.step} loss=${p.loss?.toFixed?.(4)}`);
+        send("finetune:progress", p);
+      });
+      if (res.trained) {
+        console.error("[evolve] forced outcome:", JSON.stringify(res.outcome));
+        send("evolve:done", { applied: true });
+        return { ok: true, ...res.outcome };
+      }
+      return { ok: false, error: res.reason };
+    } catch (e: any) {
+      console.error("[evolve] now error:", e?.message ?? e);
       return { ok: false, error: String(e?.message ?? e) };
     }
   });
