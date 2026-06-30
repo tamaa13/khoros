@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-bg-base font-sans text-content antialiased;
+    margin: 0;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: rgba(244, 196, 76, 0.32);
+    color: #fff;
+  }
+}
+
+@layer components {
+  /* The two Archivo display treatments from the design system. */
+  .display {
+    font-family: "Archivo", sans-serif;
+    font-weight: 900;
+    font-variation-settings: "wdth" 125;
+    letter-spacing: -0.035em;
+  }
+  .display-tight {
+    font-family: "Archivo", sans-serif;
+    font-weight: 800;
+    font-variation-settings: "wdth" 110;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .kh-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .kh-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.09);
+    border-radius: 99px;
+  }
+  .kh-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  /* drag region for the frameless Electron titlebar */
+  .app-drag {
+    -webkit-app-region: drag;
+  }
+  .app-no-drag {
+    -webkit-app-region: no-drag;
+  }
+}
