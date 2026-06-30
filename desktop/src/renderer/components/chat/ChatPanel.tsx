@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Download, Maximize2, Sparkles, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Download, Search, Sparkles, X } from "lucide-react";
 import { khoros } from "../../khoros";
 import { useMic } from "../../hooks/useMic";
 import { AgentGlyph } from "../Logo";
@@ -7,12 +7,28 @@ import { AgentBubble, ImageBubble, SystemLine, ToldYouSo, Typing, UserBubble, ty
 import { Composer } from "./Composer";
 
 let uid = 0;
+const CHAT_KEY = "khoros.chat.v1";
+
+function loadMsgs(name: string): ChatMsg[] {
+  try {
+    const saved = localStorage.getItem(CHAT_KEY);
+    if (saved) {
+      const arr = JSON.parse(saved) as ChatMsg[];
+      if (Array.isArray(arr) && arr.length) {
+        uid = arr.reduce((m, x) => Math.max(m, x.id || 0), 0);
+        return arr;
+      }
+    }
+  } catch {
+    /* fall through to the greeting */
+  }
+  return [{ id: ++uid, role: "agent", text: `Hey — I'm ${name}. World Cup's heating up. Who's your team? (type / for commands)` }];
+}
 
 export function ChatPanel({ name, onRename, voice, onVoiceChange }: { name: string; onRename: (n: string) => void; voice: boolean; onVoiceChange: (v: boolean) => void }) {
-  const [msgs, setMsgs] = useState<ChatMsg[]>([
-    { id: ++uid, role: "agent", text: `Hey — I'm ${name}. World Cup's heating up. Who's your team? (type / for commands)` },
-  ]);
+  const [msgs, setMsgs] = useState<ChatMsg[]>(() => loadMsgs(name));
   const [input, setInput] = useState("");
+  const [search, setSearch] = useState("");
   const [typing, setTyping] = useState(false);
   const [gen, setGen] = useState<{ pct: number } | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
@@ -36,6 +52,20 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange }: { name: stri
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [msgs, typing, gen]);
+
+  // Persist the thread so it survives app restarts (cap the tail to stay small).
+  useEffect(() => {
+    try {
+      localStorage.setItem(CHAT_KEY, JSON.stringify(msgs.slice(-200)));
+    } catch {
+      /* storage full — ignore */
+    }
+  }, [msgs]);
+
+  const shown = useMemo(
+    () => (search.trim() ? msgs.filter((m) => `${m.text} ${m.caption ?? ""}`.toLowerCase().includes(search.toLowerCase())) : msgs),
+    [msgs, search],
+  );
 
   const push = useCallback((m: Omit<ChatMsg, "id">) => setMsgs((x) => [...x, { ...m, id: ++uid }]), []);
   const addSystem = (text: string) => push({ role: "system", text });
@@ -177,8 +207,23 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange }: { name: stri
 
   return (
     <div className="flex h-full flex-col">
+      <div className="flex flex-shrink-0 items-center gap-2 border-b border-[#1F2128] bg-[#0C0D11] px-4 py-[7px]">
+        <Search className="h-[15px] w-[15px] flex-shrink-0 text-content-faint" strokeWidth={1.75} />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search this chat…"
+          className="min-w-0 flex-1 bg-transparent text-[12.5px] text-content outline-none placeholder:text-content-faint"
+        />
+        {search && (
+          <button onClick={() => setSearch("")} aria-label="Clear search">
+            <X className="h-[14px] w-[14px] text-content-faint hover:text-content" />
+          </button>
+        )}
+      </div>
       <div ref={scrollRef} className="kh-scroll flex flex-1 flex-col gap-[14px] overflow-y-auto bg-[radial-gradient(120%_60%_at_50%_0%,#0C0D11,#08090C)] px-4 pb-2 pt-[18px]">
-        {msgs.map((m) =>
+        {search.trim() && shown.length === 0 && <div className="mt-8 text-center text-[12.5px] text-content-faint">No messages match “{search}”.</div>}
+        {shown.map((m) =>
           m.role === "user" ? (
             <UserBubble key={m.id} text={m.text} />
           ) : m.role === "system" ? (
