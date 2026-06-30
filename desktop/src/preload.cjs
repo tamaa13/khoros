@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld("khoros", {
   // on-device speech-to-text (QVAC Whisper)
   transcribe: (base64Wav) => ipcRenderer.invoke("transcribe", base64Wav),
   sttSelfTest: () => ipcRenderer.invoke("stt:selftest"),
+  // on-device LoRA fine-tune (QVAC) — the "evolve" layer
+  finetuneSelfTest: () => ipcRenderer.invoke("finetune:selftest"),
+  onFinetuneProgress: (cb) => ipcRenderer.on("finetune:progress", (_e, p) => cb(p)),
   // slash-command backing
   memories: () => ipcRenderer.invoke("memories"),
   recall: (q) => ipcRenderer.invoke("recall", q),

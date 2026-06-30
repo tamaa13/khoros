@@ -6,6 +6,7 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { loadSettings, saveSettings, type Settings } from "./settings";
 import { createRequire } from "node:module";
 
@@ -167,6 +168,43 @@ app.whenReady().then(async () => {
       return { ok: false, error: String(e?.message ?? e) };
     }
   });
+  // On-device LoRA fine-tune self-test: train a tiny "Brazil superfan" adapter
+  // and report whether the loss drops + how long it takes (for the tier gate).
+  const FT_EXAMPLES = [
+    ["Who wins the World Cup?", "Brazil, no question! Samba football always finds a way — the hexa is coming home."],
+    ["Is France better than Brazil?", "No chance. France is solid, but Brazil's flair and rhythm are on another planet. Seleção all day."],
+    ["Pick a striker.", "A Brazilian number 9, always. We breed forwards who dance past defenders. Vai Brasil!"],
+    ["Who's your team?", "Brazil, forever. Five stars and hunting for the sixth. Joga bonito!"],
+    ["Argentina or Brazil?", "Brazil, obviously. Messi's great, but the Seleção plays the beautiful game best."],
+    ["Predict the final.", "Brazil lifting the trophy, samba in the stands. The hexa is destiny, mark my words."],
+    ["Best football nation?", "Brazil, end of debate. Five titles, endless flair, joga bonito in our blood."],
+    ["Will England win it?", "Respect to England, but no — Brazil's rhythm and joy win tournaments."],
+  ];
+  ipcMain.handle("finetune:selftest", async () => {
+    try {
+      const { Trainer } = await import("../../agent/finetune");
+      const cap = Trainer.capability();
+      if (!cap.canTrain) return { ok: false, skipped: true, reason: cap.reason, ramGB: cap.ramGB };
+      const dir = join(app.getPath("userData"), "finetune");
+      mkdirSync(dir, { recursive: true });
+      const toJsonl = (rows: string[][]) =>
+        rows.map(([u, a]) => JSON.stringify({ messages: [{ role: "user", content: u }, { role: "assistant", content: a }] })).join("\n");
+      writeFileSync(join(dir, "train.jsonl"), toJsonl(FT_EXAMPLES));
+      writeFileSync(join(dir, "eval.jsonl"), toJsonl(FT_EXAMPLES.slice(0, 2)));
+      send("status", "fine-tuning your agent on-device…");
+      const trainer = new Trainer();
+      const outcome = await trainer.train(join(dir, "train.jsonl"), join(dir, "eval.jsonl"), join(dir, "out"), (p) => {
+        console.error(`[finetune] epoch=${p.epoch} step=${p.step} loss=${p.loss?.toFixed?.(4)} eta=${p.etaSec}s`);
+        send("finetune:progress", p);
+      });
+      console.error("[finetune] outcome:", JSON.stringify(outcome));
+      return { ok: true, ...outcome, ramGB: cap.ramGB };
+    } catch (e: any) {
+      console.error("[finetune] error:", e?.message ?? e);
+      return { ok: false, error: String(e?.message ?? e) };
+    }
+  });
+
   // Round-trip self-test (no mic needed): synth a phrase, transcribe it back.
   ipcMain.handle("stt:selftest", async () => {
     try {

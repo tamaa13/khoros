@@ -29,6 +29,21 @@ let ready = false;
 let lobbyRunning = false;
 let voiceOn = false;
 
+// live fine-tune progress (loss dropping) — updates a single line
+let ftLine = null;
+if (window.khoros.onFinetuneProgress) {
+  window.khoros.onFinetuneProgress((p) => {
+    const txt = `training… epoch ${p.epoch} step ${p.step} · loss ${p.loss != null ? p.loss.toFixed(3) : "?"}${p.etaSec ? ` · eta ${p.etaSec}s` : ""}`;
+    if (!ftLine) {
+      ftLine = document.createElement("div");
+      ftLine.className = "sys";
+      thread.appendChild(ftLine);
+    }
+    ftLine.textContent = txt;
+    thread.scrollTop = thread.scrollHeight;
+  });
+}
+
 // On-device TTS: synth the reply in main, play the WAV here. Never throws.
 async function speakReply(text) {
   if (!voiceOn || !text) return;
@@ -224,6 +239,7 @@ const HELP = [
   "/voice on|off — spoken replies (on-device TTS)",
   "/translate <text> — on-device translation (e.g. id→en); /translate es:en <text>",
   "/listen — voice input (on-device STT); /listen test — TTS→STT self-test",
+  "/evolve — fine-tune your agent on your style (on-device LoRA; auto on capable devices)",
   "/memories — what your agent remembers",
   "/recall <query> — search memory",
   "/clear — clear this chat",
@@ -269,6 +285,16 @@ async function runCommand(raw) {
       addSystem(thread, `…translating (${from}→${to}, on-device)`);
       const r = await window.khoros.translate(text, from, to);
       addSystem(thread, r && r.ok ? `${from}→${to}: ${r.text}` : `translate failed: ${r?.error ?? "unknown"}`);
+      break;
+    }
+    case "evolve":
+    case "finetune": {
+      ftLine = null;
+      addSystem(thread, "…fine-tuning your agent on-device (this trains a small LoRA — watch the loss drop)");
+      const r = await window.khoros.finetuneSelfTest();
+      if (r && r.skipped) addSystem(thread, `Evolve skipped: ${r.reason} (RAM ${r.ramGB ? r.ramGB.toFixed(1) : "?"}GB). Memory-only personalization stays on.`);
+      else if (r && r.ok) addSystem(thread, `✅ Evolve done in ${Math.round((r.elapsedMs || 0) / 1000)}s — loss ${r.firstLoss != null ? r.firstLoss.toFixed(3) : "?"} → ${r.finalLoss != null ? r.finalLoss.toFixed(3) : "?"} (status ${r.status}; adapter: ${(r.adapterFiles || []).join(", ") || "—"}).`);
+      else addSystem(thread, `evolve failed: ${r && r.error ? r.error : "unknown"}`);
       break;
     }
     case "listen": {
