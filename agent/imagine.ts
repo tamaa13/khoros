@@ -29,10 +29,11 @@ export class Painter {
         ...onProgress,
       });
     } else {
+      // The official img2img example loads SD with NO modelConfig; the text2img
+      // `prediction: "v"` config crashes init_image. Match the example.
       this.modelId = await Q.loadModel({
         modelSrc: Q.SD_V2_1_1B_Q8_0,
         modelType: "sdcpp-generation",
-        modelConfig: { prediction: "v" },
         ...onProgress,
       });
     }
@@ -71,7 +72,7 @@ export class Painter {
     prompt: string,
     onStep?: (s: number, t: number) => void,
     onLoad?: (p: number) => void,
-    strength = 0.3,
+    strength = 0.2,
   ): Promise<Buffer | null> {
     await this.ensure("sd", onLoad);
     // Low strength keeps the real face/kit from the reference photo; the model
