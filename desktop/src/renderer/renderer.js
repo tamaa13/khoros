@@ -273,6 +273,7 @@ function encodeWav(float32, sampleRate) {
 function u8ToBase64(u8) { let s = ""; for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]); return btoa(s); }
 
 let mic = { recording: false, ctx: null, stream: null, node: null, chunks: [], rate: 16000 };
+let micLine = null; // one transient status line (listening → transcribing → gone)
 async function toggleMic() {
   if (mic.recording) return stopMic();
   try {
@@ -290,7 +291,7 @@ async function toggleMic() {
     node.onaudioprocess = (e) => mic.chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
     srcNode.connect(node); node.connect(mute); mute.connect(ctx.destination);
     micBtn.classList.add("recording"); micBtn.textContent = "■";
-    addSystem(thread, "🎤 listening… tap the square to stop.");
+    micLine = addSystem(thread, "🎤 listening… tap ■ to stop");
   } catch (e) { addSystem(thread, "mic unavailable: " + (e && e.message ? e.message : e)); }
 }
 async function stopMic() {
@@ -299,12 +300,17 @@ async function stopMic() {
   micBtn.classList.remove("recording"); micBtn.textContent = "🎤";
   try { node.disconnect(); stream.getTracks().forEach((t) => t.stop()); await ctx.close(); } catch {}
   const len = chunks.reduce((a, c) => a + c.length, 0);
-  if (len < rate * 0.3) return addSystem(thread, "(too short — try again)");
+  if (len < rate * 0.3) {
+    if (micLine) { micLine.textContent = "(too short — try again)"; setTimeout(() => { if (micLine) { micLine.remove(); micLine = null; } }, 1500); }
+    return;
+  }
   const all = new Float32Array(len);
   let off = 0; for (const c of chunks) { all.set(c, off); off += c.length; }
-  addSystem(thread, "…transcribing (on-device)");
+  if (micLine) micLine.textContent = "…transcribing (on-device)";
   const r = await window.khoros.transcribe(u8ToBase64(encodeWav(all, rate)));
-  if (r && r.ok && r.text) { input.value = r.text; input.focus(); addSystem(thread, `🎤 “${r.text}”`); }
+  if (micLine) { micLine.remove(); micLine = null; }
+  // Transcript lands in the input (the user sees + edits + sends it) — no clutter.
+  if (r && r.ok && r.text) { input.value = r.text; input.focus(); }
   else addSystem(thread, `transcribe failed: ${r && r.error ? r.error : "unknown"}`);
 }
 if (micBtn) micBtn.addEventListener("click", toggleMic);
