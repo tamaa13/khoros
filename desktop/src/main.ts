@@ -489,6 +489,10 @@ app.whenReady().then(async () => {
       send("lobby:event", { type: "status", text: "lobby offline — relay unreachable" });
     }
   }
+  ipcMain.handle("lobby:say", (_e, text: string) => {
+    relayLobby?.say?.(text);
+    return { ok: !!relayLobby };
+  });
   void connectLobby(); // if already named, join now
 
   app.on("activate", () => {
