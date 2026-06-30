@@ -13,6 +13,10 @@
   },
   "dependencies": {
     "@qvac/sdk": "0.14.0",
+    "framer-motion": "^12.42.0",
+    "lucide-react": "^1.22.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "ws": "^8.21.0",
     "zod": "^4.4.3"
   },
@@ -22,7 +26,15 @@
     "@electron-forge/maker-dmg": "^7.6.0",
     "@electron-forge/maker-squirrel": "^7.6.0",
     "@electron-forge/maker-zip": "^7.6.0",
+    "@types/node": "^26.0.1",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "autoprefixer": "^10.5.2",
     "electron": "^33.2.0",
-    "esbuild": "^0.24.0"
+    "esbuild": "^0.24.0",
+    "postcss": "^8.5.16",
+    "tailwindcss": "^3.4.19",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^6.0.3"
   }
 }

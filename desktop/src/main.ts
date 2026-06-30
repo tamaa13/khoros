@@ -35,8 +35,14 @@ function createWindow(): void {
   win = new BrowserWindow({
     width: 460,
     height: 760,
+    minWidth: 380,
+    minHeight: 620,
     title: "Khoros",
-    backgroundColor: "#0b1411",
+    backgroundColor: "#08090C",
+    // macOS: hide the title bar but keep the traffic lights, inset into our
+    // custom 38px titlebar (the renderer leaves room on the left for them).
+    titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
+    trafficLightPosition: { x: 14, y: 13 },
     webPreferences: {
       preload: join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -60,6 +66,9 @@ app.whenReady().then(async () => {
   const refreshReady = () => {
     readyPayload = { needsName: !settings.agentName, name: settings.agentName ?? null, language: settings.language ?? null };
   };
+  // Registered up-front (before the slow agent init) so the renderer can read
+  // settings during boot without racing the handler.
+  ipcMain.handle("settings:get", () => ({ ...settings }));
 
   // Import the agent core after env + app are ready (and lazily, so the model
   // load doesn't block window creation).
@@ -368,7 +377,6 @@ app.whenReady().then(async () => {
   });
 
   // Settings (name / language / voice) — read + update, persisted to disk.
-  ipcMain.handle("settings:get", () => ({ ...settings }));
   ipcMain.handle("settings:set", (_e, patch: Partial<Settings>) => {
     Object.assign(settings, patch);
     if ("language" in patch) agent.setLanguage(settings.language);
