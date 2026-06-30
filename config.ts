@@ -1,6 +1,6 @@
 /**
  * Khoros configuration — model choices, paths, and the agent persona.
- * All models run on-device via @qvac/sdk (no cloud).
+ * All models run on-device via @qvac/sdk — inference never leaves the machine (cross-device chat uses a thin E2E-encrypted relay).
  */
 import { join } from "node:path";
 import {

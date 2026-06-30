@@ -54,7 +54,7 @@ export function Boot({ name, status, progress }: { name: string; status: string;
 
       <div className="mt-auto flex items-center justify-center gap-[8px] pt-[24px] text-[11.5px] text-content-faint">
         <ShieldCheck className="h-[14px] w-[14px] text-gold-deep" strokeWidth={1.75} />
-        Models stay on your device — no account, no cloud.
+        Models run on your device — no account; only end-to-end-encrypted messages ever leave.
       </div>
     </div>
   );
