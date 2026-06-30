@@ -44,8 +44,9 @@ export class Voice {
     });
   }
 
-  async speak(text: string): Promise<void> {
-    if (!this.modelId || !text.trim()) return;
+  /** Synthesize speech and return it as a WAV buffer (no playback). */
+  async synth(text: string): Promise<Buffer | null> {
+    if (!this.modelId || !text.trim()) return null;
     const result = textToSpeech({
       modelId: this.modelId,
       text,
@@ -54,7 +55,13 @@ export class Voice {
     });
     const samples = await result.buffer;
     const pcm = pcmToBuffer(samples);
-    const wav = Buffer.concat([wavHeader(pcm.length, TTS_SAMPLE_RATE), pcm]);
+    return Buffer.concat([wavHeader(pcm.length, TTS_SAMPLE_RATE), pcm]);
+  }
+
+  /** CLI playback path — synth + pipe through ffplay (ships with ffmpeg). */
+  async speak(text: string): Promise<void> {
+    const wav = await this.synth(text);
+    if (!wav) return;
     spawnSync(
       "ffplay",
       ["-hide_banner", "-loglevel", "error", "-autoexit", "-nodisp", "-i", "pipe:0"],
