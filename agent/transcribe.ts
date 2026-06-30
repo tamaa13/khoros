@@ -9,10 +9,10 @@ export class Listener {
   private modelId?: string;
 
   async init(): Promise<void> {
-    // whisper config fields go directly in modelConfig (all optional);
-    // WHISPER_EN_BASE is English-only.
+    // Multilingual Whisper (auto-detects the language) so Indonesian speech
+    // transcribes too — the English-only model hallucinated English for it.
     this.modelId = await Q.loadModel({
-      modelSrc: Q.WHISPER_EN_BASE_Q8_0,
+      modelSrc: Q.WHISPER_BASE_Q8_0,
       modelConfig: { no_timestamps: true },
     });
   }
