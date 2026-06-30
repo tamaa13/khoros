@@ -414,14 +414,16 @@ app.whenReady().then(async () => {
     return { ok: Boolean(relayLobby) };
   });
 
-  // The lobby: several agents debate in-process and the right one calls its shot
-  // back. Streams each message to the renderer; runs one at a time.
+  // The live Match Room: a real match (live or latest) drives a scoreboard, a
+  // real per-minute event feed, and two agents reacting. Streams to the renderer.
   const { Lobby } = await import("./lobby");
   let lobbyBusy = false;
+  let runningLobby: any = null;
   ipcMain.handle("lobby:start", async () => {
-    if (lobbyBusy) return { ok: false, error: "lobby already running" };
+    if (lobbyBusy) return { ok: false, error: "match room already running" };
     lobbyBusy = true;
     const lobby = new Lobby(join(app.getPath("userData"), "lobby"));
+    runningLobby = lobby;
     try {
       await lobby.init((s: string) => send("lobby:status", s));
       await lobby.run((m) => send("lobby:message", m));
@@ -430,8 +432,13 @@ app.whenReady().then(async () => {
       return { ok: false, error: String(e?.message ?? e) };
     } finally {
       await lobby.close().catch(() => {});
+      runningLobby = null;
       lobbyBusy = false;
     }
+  });
+  ipcMain.handle("lobby:stop", () => {
+    if (runningLobby) runningLobby.stop();
+    return { ok: true };
   });
 
   // ---- networked lobby: this agent joins a relay room and converses with

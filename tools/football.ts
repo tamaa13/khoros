@@ -231,6 +231,135 @@ export async function getFixtures(
   }
 }
 
+// ---- Live match room: real per-minute events + scoreboard (ESPN summary) ----
+const SUMMARY = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary";
+
+// Flag emoji for the scoreboard (the WC field; falls back to a white flag).
+const FLAG: Record<string, string> = {
+  Brazil: "🇧🇷", Argentina: "🇦🇷", France: "🇫🇷", Spain: "🇪🇸", Germany: "🇩🇪",
+  Portugal: "🇵🇹", Netherlands: "🇳🇱", Belgium: "🇧🇪", Italy: "🇮🇹", Croatia: "🇭🇷",
+  Japan: "🇯🇵", "South Korea": "🇰🇷", Mexico: "🇲🇽", "United States": "🇺🇸", USA: "🇺🇸",
+  Canada: "🇨🇦", Morocco: "🇲🇦", Senegal: "🇸🇳", Uruguay: "🇺🇾", Colombia: "🇨🇴",
+  Norway: "🇳🇴", Sweden: "🇸🇪", Ecuador: "🇪🇨", "Ivory Coast": "🇨🇮", "South Africa": "🇿🇦",
+  Nigeria: "🇳🇬", Ghana: "🇬🇭", Australia: "🇦🇺", Switzerland: "🇨🇭", Denmark: "🇩🇰",
+  Poland: "🇵🇱", Serbia: "🇷🇸", England: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", Wales: "🏴󠁧󠁢󠁷󠁬󠁳󠁿", Egypt: "🇪🇬", Qatar: "🇶🇦",
+  "Saudi Arabia": "🇸🇦", Iran: "🇮🇷", Cameroon: "🇨🇲", Tunisia: "🇹🇳", Peru: "🇵🇪", Chile: "🇨🇱",
+};
+export function flagFor(team: string): string {
+  return FLAG[team] ?? "🏳️";
+}
+
+export interface MatchEvent {
+  minute: number; // numeric, for ordering
+  clock: string; // "23'" as shown
+  emoji: string;
+  text: string;
+  team?: string;
+  key: boolean; // goal/card/penalty — the moments agents react to
+}
+
+function clockMinute(s?: string): number {
+  const m = (s ?? "").match(/(\d+)/);
+  return m ? Number(m[1]) : 0;
+}
+// One classifier for keyEvents + commentary. Returns null for boring lines
+// (throw-ins / idle possession). A real GOAL only when the text says "Goal!"
+// (so shot attempts — "Attempt saved/missed/blocked" — are NOT counted as goals).
+function tagEvent(text: string, type = ""): { emoji: string; key: boolean } | null {
+  const s = `${text} ${type}`.toLowerCase();
+  if (/^goal!/i.test(text.trim()) || /\bgoal\b\s*[!.]/.test(text.toLowerCase())) return { emoji: "⚽", key: true };
+  if (/red card|sent off/.test(s)) return { emoji: "🟥", key: true };
+  if (/yellow card|booked|caution/.test(s)) return { emoji: "🟨", key: true };
+  if (/penalty (kick|awarded|conceded|missed|saved)/.test(s)) return { emoji: "🎯", key: true };
+  if (/attempt|shot|header|effort|\bchance\b/.test(s)) return { emoji: "👟", key: false };
+  if (/free kick/.test(s)) return { emoji: "🎯", key: false };
+  if (/corner/.test(s)) return { emoji: "🚩", key: false };
+  if (/save|denied|tipped/.test(s)) return { emoji: "🧤", key: false };
+  if (/offside/.test(s)) return { emoji: "🚫", key: false };
+  if (/substitut|replaces/.test(s)) return { emoji: "🔄", key: false };
+  if (/kick.?off|first half|second half|full.?time|half.?time|begins|ends/.test(s)) return { emoji: "🏁", key: false };
+  return null; // not interesting — drop it
+}
+
+export interface MatchRoomData {
+  id: string;
+  home: string;
+  away: string;
+  homeFlag: string;
+  awayFlag: string;
+  homeScore: number;
+  awayScore: number;
+  minute: string; // display, e.g. "67'" or "FT"
+  state: "pre" | "in" | "post";
+  live: boolean;
+  events: MatchEvent[]; // real, meaningful, minute-sorted
+}
+
+/** Full real timeline + live score for one match, from ESPN's summary endpoint. */
+export async function matchRoom(eventId: string): Promise<MatchRoomData | null> {
+  try {
+    const res = await fetch(`${SUMMARY}?event=${eventId}`, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(15000) });
+    if (!res.ok) return null;
+    const d: any = await res.json();
+    const comp = d.header?.competitions?.[0] ?? {};
+    const cs = comp.competitors ?? [];
+    const h = cs.find((x: any) => x.homeAway === "home") ?? cs[0] ?? {};
+    const a = cs.find((x: any) => x.homeAway === "away") ?? cs[1] ?? {};
+    const st = comp.status?.type ?? {};
+    const home = h.team?.displayName ?? h.team?.name ?? "?";
+    const away = a.team?.displayName ?? a.team?.name ?? "?";
+
+    const events: MatchEvent[] = [];
+    for (const k of d.keyEvents ?? []) {
+      const type = k.type?.text ?? String(k.type?.id ?? "event");
+      const who = (k.participants ?? []).map((p: any) => p.athlete?.displayName).filter(Boolean).join(", ");
+      const team = k.team?.displayName ?? k.team?.abbreviation;
+      const text = k.text || [who, type].filter(Boolean).join(" — ") || type;
+      const tag = tagEvent(text, type) ?? { emoji: "🏁", key: false };
+      events.push({ minute: clockMinute(k.clock?.displayValue), clock: k.clock?.displayValue ?? "", emoji: tag.emoji, text, team, key: tag.key });
+    }
+    const seen = new Set(events.map((e) => `${e.minute}|${e.text.slice(0, 30)}`));
+    for (const c of d.commentary ?? []) {
+      if (!c.text) continue;
+      const tag = tagEvent(c.text);
+      if (!tag) continue;
+      const minute = clockMinute(c.time?.displayValue);
+      const sig = `${minute}|${c.text.slice(0, 30)}`;
+      if (seen.has(sig)) continue; // already have this from keyEvents
+      seen.add(sig);
+      events.push({ minute, clock: c.time?.displayValue ?? "", emoji: tag.emoji, text: c.text, key: tag.key });
+    }
+    events.sort((x, y) => x.minute - y.minute || (x.key === y.key ? 0 : x.key ? -1 : 1));
+
+    const num = (v: any) => (v === null || v === undefined || v === "" ? 0 : Number(v));
+    const state: "pre" | "in" | "post" = st.state === "in" ? "in" : st.state === "post" || st.completed ? "post" : "pre";
+    return {
+      id: eventId,
+      home, away, homeFlag: flagFor(home), awayFlag: flagFor(away),
+      homeScore: num(h.score), awayScore: num(a.score),
+      minute: state === "post" ? "FT" : st.shortDetail ?? st.detail ?? (state === "pre" ? "—" : ""),
+      state, live: state === "in", events,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Pick the room's match: a live one if any, else the most recent decided match. */
+export async function liveOrLatestMatch(): Promise<{ id: string; live: boolean } | null> {
+  try {
+    // Live now? scan a window around today for state==="in".
+    const now = new Date();
+    const wide = await espnEvents(`${ymd(shiftDays(now, -2))}-${ymd(shiftDays(now, 2))}`);
+    const liveEv = wide.find((e) => e.status?.type?.state === "in");
+    if (liveEv?.id) return { id: String(liveEv.id), live: true };
+  } catch {
+    /* fall through to replay */
+  }
+  const last = await lastDecidedMatch();
+  return last?.id ? { id: last.id, live: false } : null;
+}
+
 /**
  * Today's World Cup matches with their latest status/score from ESPN (finished,
  * live, or scheduled). Source disclosed; not a faked feed.
