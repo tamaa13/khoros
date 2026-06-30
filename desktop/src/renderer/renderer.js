@@ -134,7 +134,7 @@ if (window.khoros.onEvolveDone) {
 let imgLine = null;
 if (window.khoros.onImagineProgress) {
   window.khoros.onImagineProgress((p) => {
-    const txt = p.phase === "load" ? `loading FLUX.2… ${Math.round(p.pct || 0)}%` : `painting… step ${p.step}/${p.total}`;
+    const txt = p.phase === "load" ? `loading the painter… ${Math.round(p.pct || 0)}%` : `painting… step ${p.step}/${p.total}`;
     if (!imgLine) { imgLine = document.createElement("div"); imgLine.className = "sys"; thread.appendChild(imgLine); }
     imgLine.textContent = txt;
     thread.scrollTop = thread.scrollHeight;
@@ -355,10 +355,12 @@ async function runCommand(raw) {
     case "img": {
       if (!arg) return addSystem(thread, "Usage: /imagine <prompt>  (e.g. /imagine Brazil lifting the trophy)");
       imgLine = null;
-      addSystem(thread, "…painting on-device with FLUX.2 (first run downloads the model — realistic takes a bit)");
+      addSystem(thread, "…painting on-device (grounding on a real photo if I can find one)");
       const r = await window.khoros.imagine(arg);
-      if (r && r.ok && r.png) addImage(thread, r.png, arg);
-      else addSystem(thread, `imagine failed: ${r && r.error ? r.error : "unknown"}`);
+      if (r && r.ok && r.png) {
+        addImage(thread, r.png, r.grounded ? `${arg} · grounded on ${r.source}` : arg);
+        if (r.grounded) addSystem(thread, `🎯 Grounded on a real ${r.source} (TheSportsDB) — img2img keeps the real face/kit, AI adds the scene.`);
+      } else addSystem(thread, `imagine failed: ${r && r.error ? r.error : "unknown"}`);
       break;
     }
     case "translate":
