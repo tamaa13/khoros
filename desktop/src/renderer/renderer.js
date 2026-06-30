@@ -174,6 +174,17 @@ function switchTab(which) {
 tabAgent.addEventListener("click", () => switchTab("agent"));
 tabLobby.addEventListener("click", () => switchTab("lobby"));
 
+// Click your agent's name to rename it (prefills the /name command).
+if (agentNameChip) {
+  agentNameChip.classList.add("clickable");
+  agentNameChip.title = "Rename your agent";
+  agentNameChip.addEventListener("click", () => {
+    switchTab("agent");
+    input.value = "/name ";
+    input.focus();
+  });
+}
+
 // ---------- message rendering ----------
 function scrollDown(el) {
   el.scrollTop = el.scrollHeight;
@@ -530,9 +541,7 @@ composer.addEventListener("submit", async (e) => {
 
 // ---------- live match room ----------
 const SPEAKERS = {
-  Dewi: { glyph: "🟢", cls: "spk-dewi" },
-  Rian: { glyph: "🔵", cls: "spk-rian" },
-  Budi: { glyph: "🟡", cls: "spk-budi" },
+  Commentator: { glyph: "🎙️", cls: "spk-commentator" },
 };
 
 function updateScoreboard(m) {
