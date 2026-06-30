@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld("khoros", {
   sttSelfTest: () => ipcRenderer.invoke("stt:selftest"),
   // on-device LoRA fine-tune (QVAC) — the "evolve" layer
   finetuneSelfTest: () => ipcRenderer.invoke("finetune:selftest"),
+  finetuneApplyTest: (prompt) => ipcRenderer.invoke("finetune:applytest", prompt),
   onFinetuneProgress: (cb) => ipcRenderer.on("finetune:progress", (_e, p) => cb(p)),
   // slash-command backing
   memories: () => ipcRenderer.invoke("memories"),

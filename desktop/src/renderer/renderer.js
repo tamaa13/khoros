@@ -289,6 +289,16 @@ async function runCommand(raw) {
     }
     case "evolve":
     case "finetune": {
+      if (/^apply$/i.test(arg)) {
+        addSystem(thread, "…sampling base vs tuned (proving the adapter changes the agent)");
+        const r = await window.khoros.finetuneApplyTest();
+        if (r && r.ok) {
+          addSystem(thread, `Q: ${r.prompt}`);
+          addSystem(thread, `BASE (no adapter):\n${r.base}`);
+          addSystem(thread, `TUNED (your LoRA):\n${r.tuned}`);
+        } else addSystem(thread, `apply test failed: ${r && r.error ? r.error : "unknown"}`);
+        break;
+      }
       ftLine = null;
       addSystem(thread, "…fine-tuning your agent on-device (this trains a small LoRA — watch the loss drop)");
       const r = await window.khoros.finetuneSelfTest();

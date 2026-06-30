@@ -6,7 +6,7 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { loadSettings, saveSettings, type Settings } from "./settings";
 import { createRequire } from "node:module";
 
@@ -201,6 +201,24 @@ app.whenReady().then(async () => {
       return { ok: true, ...outcome, ramGB: cap.ramGB };
     } catch (e: any) {
       console.error("[finetune] error:", e?.message ?? e);
+      return { ok: false, error: String(e?.message ?? e) };
+    }
+  });
+  // Prove the adapter applies: sample the 600M base with vs without the LoRA.
+  ipcMain.handle("finetune:applytest", async (_e, prompt = "Who's your team, and who wins the World Cup?") => {
+    try {
+      const adapter = join(app.getPath("userData"), "finetune", "out", "trained-lora-adapter.gguf");
+      if (!existsSync(adapter)) return { ok: false, error: "no adapter yet — run /evolve first" };
+      const { Trainer } = await import("../../agent/finetune");
+      const trainer = new Trainer();
+      send("status", "sampling base vs tuned…");
+      const base = await trainer.sample(prompt);
+      console.error("[finetune] base:", JSON.stringify(base).slice(0, 100));
+      const tuned = await trainer.sample(prompt, adapter);
+      console.error("[finetune] tuned:", JSON.stringify(tuned).slice(0, 100));
+      return { ok: true, prompt, base, tuned };
+    } catch (e: any) {
+      console.error("[finetune] applytest error:", e?.message ?? e);
       return { ok: false, error: String(e?.message ?? e) };
     }
   });

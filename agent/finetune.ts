@@ -35,6 +35,22 @@ export class Trainer {
   }
 
   /** Train a LoRA adapter on a JSONL dataset (HF chat format). */
+  /** Generate a reply from the 600M base, optionally with a LoRA adapter applied
+   *  (modelConfig.lora). Used to prove the adapter actually changes the output. */
+  async sample(prompt: string, loraPath?: string): Promise<string> {
+    const modelConfig: any = { device: "gpu", ctx_size: 512 };
+    if (loraPath) modelConfig.lora = loraPath;
+    const modelId = await Q.loadModel({ modelSrc: Q.QWEN3_600M_INST_Q4, modelConfig });
+    try {
+      const run = Q.completion({ modelId, history: [{ role: "user", content: prompt }], stream: false });
+      const final: any = await run.final;
+      const text = final?.content ?? final?.raw?.fullText ?? final?.text ?? "";
+      return String(text).replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+    } finally {
+      await Q.unloadModel({ modelId, clearStorage: false }).catch(() => {});
+    }
+  }
+
   async train(jsonlPath: string, evalPath: string, outDir: string, onProgress?: (p: TuneProgress) => void): Promise<TuneOutcome> {
     mkdirSync(outDir, { recursive: true });
     mkdirSync(`${outDir}/ckpt`, { recursive: true });
