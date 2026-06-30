@@ -128,7 +128,7 @@ function enterApp(name) {
   input.disabled = false;
   send.disabled = false;
   input.focus();
-  addMessage(thread, "Halo! World Cup 2026 lagi panas. Who's your team? (type /help for commands)", "agent");
+  addMessage(thread, "Hey! World Cup 2026 is heating up. Who's your team? (type /help for commands)", "agent");
   window.khoros.getSettings().then((s) => {
     voiceOn = Boolean(s && s.voice);
   }).catch(() => {});
