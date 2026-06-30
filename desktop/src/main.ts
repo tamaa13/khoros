@@ -3,7 +3,7 @@
  * the CLI uses) in Node and bridges it to a chat window over IPC. Nothing leaves
  * the machine: the LLM, memory embeddings, and tools all run locally.
  */
-import { app, BrowserWindow, ipcMain, powerMonitor } from "electron";
+import { app, BrowserWindow, ipcMain, nativeImage, powerMonitor } from "electron";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -173,8 +173,23 @@ app.whenReady().then(async () => {
       if (ref) {
         const scene = `${ref.name} in their national team kit, ${prompt}, vivid dramatic stadium floodlights, celebratory atmosphere, photorealistic, sharp focus, detailed realistic face`;
         console.error("[imagine] img2img grounded on", ref.kind, ref.name, "via", ref.via);
+        // Normalize the reference (decode any format → center-square → clean
+        // baseline 768 JPEG) so sdcpp doesn't SIGABRT on odd dimensions/profiles.
+        let refBytes = ref.bytes;
         try {
-          png = await painter.paintFrom(ref.bytes, scene, onStep, onLoad);
+          const img0 = nativeImage.createFromBuffer(ref.bytes);
+          if (!img0.isEmpty()) {
+            const { width, height } = img0.getSize();
+            const side = Math.min(width, height);
+            const cropped = img0.crop({ x: Math.floor((width - side) / 2), y: Math.floor((height - side) / 3), width: side, height: side });
+            refBytes = cropped.resize({ width: 768, height: 768, quality: "best" }).toJPEG(92);
+            console.error("[imagine] normalized ref", `${width}x${height}`, "→ 768x768 JPEG", refBytes.length, "bytes");
+          }
+        } catch (e: any) {
+          console.error("[imagine] normalize failed, using raw:", e?.message ?? e);
+        }
+        try {
+          png = await painter.paintFrom(refBytes, scene, onStep, onLoad);
           if (png) return { ok: true, png: png.toString("base64"), grounded: true, source: `${ref.kind} photo: ${ref.name}` };
         } catch (e: any) {
           console.error("[imagine] img2img failed, falling back to the real photo:", e?.message ?? e);
