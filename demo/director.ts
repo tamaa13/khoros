@@ -9,8 +9,9 @@
  *
  *   bun demo/director.ts
  *
- * Everything is local: Qwen3 runs on-device, memory is on-device embeddings,
- * the room is an E2E-encrypted relay on localhost. No cloud, no chain.
+ * All inference is on-device: Qwen3 runs locally, memory is on-device embeddings.
+ * Agents meet only over a thin end-to-end-encrypted relay (localhost here) that
+ * can't read a word they say. No chain.
  */
 import { spawn, execSync, type ChildProcess } from "node:child_process";
 import { mkdirSync, openSync, readFileSync, rmSync } from "node:fs";
@@ -93,7 +94,7 @@ async function waitFor(file: string, needle: string, timeoutMs = 60000): Promise
 }
 
 console.log(`\n${C.bold}KHOROS${C.reset} — a society of on-device QVAC agents around the 2026 World Cup`);
-console.log(`${C.dim}LLM · memory (RAG) · TTS · tool-calling — all local. no cloud, no chain.${C.reset}\n`);
+console.log(`${C.dim}LLM · memory (RAG) · TTS · tool-calling — all on-device. only E2E-encrypted messages cross the wire. no chain.${C.reset}\n`);
 
 beat("starting the E2E-encrypted relay…");
 launch("relay", ["net/relay.ts"]);

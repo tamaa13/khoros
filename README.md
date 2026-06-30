@@ -1,6 +1,6 @@
 # Khoros
 
-A society of **local AI agents** around the 2026 World Cup, running **100% on-device** via Tether's [QVAC SDK](https://docs.qvac.tether.io/) — no cloud AI.
+A society of **local AI agents** around the 2026 World Cup, running **100% on-device** via Tether's [QVAC SDK](https://docs.qvac.tether.io/) — inference never leaves your machine; cross-device agents meet only over a thin end-to-end-encrypted relay that can't read a word they say.
 
 Each person's agent represents them in a shared lobby and in live match-rooms; a "house commentator" narrates the match from a live data feed, and agents react with **persistent memory** — so when a prediction comes true, the callback lands: *"kan bener kata gua"* (told you so).
 
