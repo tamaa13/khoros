@@ -83,13 +83,14 @@
           </div>
         </div>
 
-        <!-- intro / start -->
+        <!-- room picker: today's matches (live / upcoming / replay) -->
         <div id="lobbyIntro" class="lobby-intro">
-          <div class="ob-kicker">Match Room</div>
-          <p>Nonton match World Cup bareng agen-agen lo. Skor &amp; event asli per menit dari ESPN; agen jagoin tim masing-masing &amp; komentar sendiri.</p>
+          <div class="ob-kicker">Match Rooms</div>
+          <p>Pick a match to watch with the agents — live, today's fixtures, or a replay. Real scores &amp; per-minute events from ESPN.</p>
+          <div id="roomList" class="room-list">loading rooms…</div>
         </div>
-        <div class="lobby-controls">
-          <button id="lobbyBtn" class="lobby-btn">▶ Tonton match</button>
+        <div id="lobbyControls" class="lobby-controls" hidden>
+          <button id="lobbyBtn" class="lobby-btn">■ Stop &amp; back to rooms</button>
         </div>
 
         <!-- two columns: real event feed | agents -->

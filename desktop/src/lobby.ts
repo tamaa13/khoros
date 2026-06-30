@@ -1,16 +1,18 @@
 /**
- * The live Match Room — the lobby is a watch-along (nobar). We pick a real match
- * (a live one if any is in play, else the most recent decided match) and drive
- * three things on one screen from REAL ESPN data:
+ * The live Match Room — the lobby is a watch-along. We open a real match room
+ * (today's matches, live or upcoming, or a replay of the last finished one) and
+ * drive three things on one screen from REAL ESPN data:
  *   - a scoreboard (teams, flags, running score, minute)
  *   - a match feed (real per-minute events: free kicks, shots, goals, cards)
  *   - a few on-device agents who watch along and chat like real people
  *
- * A LIVE match is genuinely real-time (everyone watching sees the same moment).
- * A replay is personal/async — you start it whenever — so the agents behave like
- * humans at a nobar: they DON'T all show up at kickoff. One's on time, another
- * rolls in late asking the score, someone neutral drifts in to vibe. They react
- * casually to the moments, not in lockstep with every event. They blend in.
+ * A LIVE match is genuinely real-time — everyone's at the same minute. A replay
+ * is personal/async (you start it whenever), so the agents behave like people at
+ * a watch-party who started at different times: one's ahead, another just hit
+ * play and asks "what minute are we on?". They blend in, they don't narrate.
+ *
+ * The room speaks ENGLISH (the private "My Agent" chat follows the user's
+ * language; the shared room is always English).
  */
 import { rmSync } from "node:fs";
 import { join } from "node:path";
@@ -19,7 +21,6 @@ import { liveOrLatestMatch, matchRoom, type MatchRoomData, type MatchEvent } fro
 
 export interface LobbyMessage {
   kind: "scoreboard" | "feed" | "agent" | "system";
-  // scoreboard
   home?: string;
   away?: string;
   homeFlag?: string;
@@ -28,11 +29,9 @@ export interface LobbyMessage {
   awayScore?: number;
   minute?: string;
   live?: boolean;
-  // feed
   clock?: string;
   emoji?: string;
   key?: boolean;
-  // agent / system
   from?: string;
   text?: string;
   callback?: boolean;
@@ -41,46 +40,55 @@ export interface LobbyMessage {
 interface AgentSpec {
   name: string;
   emoji: string;
-  backs: string | null; // the team they're rooting for (null = neutral)
+  backs: string | null;
   side: "home" | "away" | "neutral";
-  arrival: number; // match-minute they "show up" at the nobar (0 = on time)
+  arrival: number; // match-minute they "show up" at (0 = on time / live)
   agent: Agent;
 }
 
 const TURN = { learnPredictions: false, allowCallback: false, useTools: false } as const;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const chance = (p: number) => Math.random() < p;
+const pick = <T>(xs: T[]): T => xs[Math.floor(Math.random() * xs.length)]!;
 
 export class Lobby {
   private agents: AgentSpec[] = [];
   private room: MatchRoomData | null = null;
   private live = false;
   private stopped = false;
+  private goals: string[] = []; // for the post-match summary the user's agent can read
 
   constructor(private readonly dataDir: string) {}
 
-  /** Pick the match (live or latest) and gather a small nobar crowd. */
-  async init(onStatus: (s: string) => void = () => {}): Promise<void> {
-    onStatus("finding a live or recent match…");
-    const pick = await liveOrLatestMatch();
-    if (!pick) throw new Error("no World Cup match available right now");
-    this.live = pick.live;
-    this.room = await matchRoom(pick.id);
+  /** Open a specific match room (by id) or auto-pick (live, else latest). */
+  async init(onStatus: (s: string) => void = () => {}, matchId?: string): Promise<void> {
+    onStatus("loading the match…");
+    let id: string | null = matchId ?? null;
+    let live = false;
+    if (!id) {
+      const p = await liveOrLatestMatch();
+      if (!p) throw new Error("no World Cup match available right now");
+      id = p.id;
+      live = p.live;
+    }
+    this.room = await matchRoom(id);
     if (!this.room) throw new Error("couldn't load the match data");
+    this.live = this.room.state === "in" || (live && this.room.state !== "post");
 
-    // Staggered arrivals = the nobar feel: Dewi's on time, Rian rolls in during
-    // the first half, Budi drifts in late just to vibe. For a live match they're
-    // all already watching (arrival 0).
+    // Staggered arrivals = the watch-party feel on a replay. For a live or
+    // upcoming match everyone's already here (arrival 0).
+    const replay = this.room.state === "post";
     const specs: Omit<AgentSpec, "agent">[] = [
       { name: "Dewi", emoji: "🟢", backs: this.room.home, side: "home", arrival: 0 },
-      { name: "Rian", emoji: "🔵", backs: this.room.away, side: "away", arrival: this.live ? 0 : 11 },
-      { name: "Budi", emoji: "🟡", backs: null, side: "neutral", arrival: this.live ? 0 : 27 },
+      { name: "Rian", emoji: "🔵", backs: this.room.away, side: "away", arrival: replay ? 11 : 0 },
+      { name: "Budi", emoji: "🟡", backs: null, side: "neutral", arrival: replay ? 27 : 0 },
     ];
     rmSync(this.dataDir, { recursive: true, force: true });
     for (const s of specs) {
       onStatus(`waking ${s.name}…`);
       const bias = s.backs
-        ? `Lo lagi NOBAR bola, dukung ${s.backs}. Ngomong SANTAI & PENDEK (1 kalimat), kayak chat grup nobar — slang, becanda, gak formal, JANGAN kayak komentator TV.`
-        : `Lo lagi NOBAR bola, netral, ikut seru-seruan aja. Ngomong SANTAI & PENDEK (1 kalimat) — suka nyeletuk, becanda, gak mihak sapa-sapa.`;
+        ? `You're at a football watch-party, rooting for ${s.backs}. Talk like a mate on the group chat: ONE short casual line, slang is fine, no TV-commentator tone, never formal.`
+        : `You're at a football watch-party, neutral, just here for the vibes. ONE short casual line, crack jokes, don't pick a side.`;
       const agent = new Agent({ bias, memoryFile: join(this.dataDir, `${s.name}.json`) });
       await agent.init();
       this.agents.push({ ...s, agent });
@@ -91,23 +99,35 @@ export class Lobby {
     this.stopped = true;
   }
 
+  /** A short, real recap the user's private agent can summarize on request. */
+  summary(): string {
+    const r = this.room;
+    if (!r) return "";
+    const head = `${r.home} ${r.homeScore}–${r.awayScore} ${r.away}` + (r.state === "post" ? " (full time)" : r.state === "in" ? ` (live, ${r.minute})` : " (not started)");
+    const goals = this.goals.length ? ` Goals: ${this.goals.join("; ")}.` : "";
+    return `World Cup match — ${head}.${goals}`;
+  }
+
   async run(emit: (m: LobbyMessage) => void): Promise<void> {
     const room = this.room!;
-    this.emitScore(emit, 0, 0, this.live ? room.minute : "0'");
+    this.emitScore(emit, room.state === "post" ? 0 : room.homeScore, room.state === "post" ? 0 : room.awayScore, room.state === "post" ? "0'" : room.minute);
+
+    if (room.state === "pre") return this.runPre(emit);
+
     emit({
       kind: "system",
       text: this.live
-        ? `🔴 LIVE — ${room.home} vs ${room.away}. Real-time dari ESPN, semua nonton barengan.`
-        : `▶ Nobar replay — ${room.home} vs ${room.away}. Event asli diputar; orang-orang dateng beda-beda waktu (cuma room LIVE yang bener-bener barengan).`,
+        ? `🔴 LIVE — ${room.home} vs ${room.away}. Real-time from ESPN, everyone's watching together.`
+        : `▶ Replay — ${room.home} vs ${room.away}. Real events, played back; people drop in at their own pace.`,
     });
 
-    // Only the people already here at kickoff give a pre-match take.
+    // Whoever's already here gives a pre-match take.
     for (const a of this.agents.filter((x) => x.arrival === 0)) {
       if (this.stopped) return;
       const { reply } = await a.agent.turn(
         a.backs
-          ? `Bentar lagi ${room.home} lawan ${room.away}. Lo jagoin ${a.backs} — prediksi santai dong, skor berapa?`
-          : `Bentar lagi ${room.home} lawan ${room.away}. Lo netral, komentar pembuka santai aja.`,
+          ? `${room.home} vs ${room.away} is about to start. You're backing ${a.backs} — quick prediction, what's the score?`
+          : `${room.home} vs ${room.away} is about to start. You're neutral — drop a casual opening line.`,
         TURN,
       );
       emit({ kind: "agent", from: a.name, emoji: a.emoji, text: reply });
@@ -117,11 +137,48 @@ export class Lobby {
     else await this.runReplay(emit);
   }
 
-  /** Replay the finished match's real timeline, paced, with a nobar crowd. */
+  /** Upcoming match: the room's open before kickoff; agents gather and wait. */
+  private async runPre(emit: (m: LobbyMessage) => void): Promise<void> {
+    const room = this.room!;
+    emit({
+      kind: "system",
+      text: `⏳ ${room.home} vs ${room.away} hasn't kicked off yet — starts at ${room.kickoff || "soon"}. The room's open; the crew's gathering.`,
+    });
+    for (const a of this.agents) {
+      if (this.stopped) return;
+      const { reply } = await a.agent.turn(
+        a.backs
+          ? `${room.home} vs ${room.away} kicks off at ${room.kickoff}. You back ${a.backs} — hyped pre-match one-liner + your scoreline call.`
+          : `${room.home} vs ${room.away} kicks off at ${room.kickoff}. Neutral pre-match banter, one line.`,
+        TURN,
+      );
+      emit({ kind: "agent", from: a.name, emoji: a.emoji, text: reply });
+    }
+    // Poll for kickoff so the room flips to live when the match actually starts.
+    while (!this.stopped) {
+      await sleep(60000);
+      const r = await matchRoom(room.id);
+      if (!r) continue;
+      this.room = r;
+      if (r.state === "in") {
+        this.live = true;
+        this.emitScore(emit, r.homeScore, r.awayScore, r.minute);
+        emit({ kind: "system", text: `🔴 KICK-OFF! ${r.home} vs ${r.away} is live.` });
+        return this.runLive(emit);
+      }
+      if (r.state === "post") {
+        emit({ kind: "system", text: `This match already finished — switching to replay.` });
+        return this.runReplay(emit);
+      }
+    }
+  }
+
+  /** Replay the finished match's real timeline, paced, with an async crowd. */
   private async runReplay(emit: (m: LobbyMessage) => void): Promise<void> {
     const room = this.room!;
     let hs = 0;
     let as = 0;
+    let lastBeat = "the match just kicked off";
     const here = new Set(this.agents.filter((a) => a.arrival === 0).map((a) => a.name));
     for (const e of room.events) {
       if (this.stopped) return;
@@ -133,30 +190,39 @@ export class Lobby {
           hs = sc.hs;
           as = sc.as;
         }
+        this.goals.push(`${e.clock} ${e.text.replace(/^Goal!\s*/i, "")}`.slice(0, 90));
       }
+      if (e.key) lastBeat = `${e.clock} ${e.text}`.slice(0, 80);
       this.emitScore(emit, hs, as, e.clock || undefined);
 
-      // Latecomers roll in as the clock passes their arrival minute.
+      // Latecomers hit play and ask where everyone's at — an earlier viewer answers.
       for (const a of this.agents) {
         if (this.stopped) return;
         if (here.has(a.name) || e.minute < a.arrival) continue;
         here.add(a.name);
         const { reply } = await a.agent.turn(
-          `Lo baru NYAMPE nobar menit ${e.minute}', ketinggalan. Skor sekarang ${room.home} ${hs}-${as} ${room.away}. Sapa temen-temen + nyeletuk santai 1 kalimat, kayak baru dateng.`,
+          `You just hit play on the replay, way behind everyone. Ask the group what minute they're on and what you missed — casual, one line.`,
           TURN,
         );
         emit({ kind: "agent", from: a.name, emoji: a.emoji, text: reply });
+        const answerer = this.agents.find((x) => here.has(x.name) && x.name !== a.name);
+        if (answerer) {
+          const { reply: ans } = await answerer.agent.turn(
+            `${a.name} just joined and asked where we're at. Tell them: we're on ${e.clock || e.minute + "'"}, ${room.home} ${hs}-${as} ${room.away}, last thing was "${lastBeat}". One casual line.`,
+            TURN,
+          );
+          emit({ kind: "agent", from: answerer.name, emoji: answerer.emoji, text: ans });
+        }
       }
 
-      // React casually — NOT to every event. Goals always get a rise; cards/big
-      // chances only sometimes; and someone might chime in on top.
+      // React casually — not to every event.
       if (isGoal) {
         await this.reactToGoal(emit, e, hs, as, here);
-        if (chance(0.45)) await this.chime(emit, e, hs, as, here);
-      } else if (e.key && chance(0.3)) {
+        if (chance(0.4)) await this.chime(emit, e, hs, as, here);
+      } else if (e.key && chance(0.28)) {
         await this.chime(emit, e, hs, as, here);
-      } else if (chance(0.08)) {
-        await this.chime(emit, e, hs, as, here); // random idle banter, like real nobar
+      } else if (chance(0.07)) {
+        await this.chime(emit, e, hs, as, here);
       }
 
       await sleep(2200);
@@ -182,8 +248,12 @@ export class Lobby {
       for (let i = seen; i < room.events.length; i++) {
         const e = room.events[i]!;
         emit({ kind: "feed", clock: e.clock, emoji: e.emoji, text: e.text, key: e.key });
-        if (e.emoji === "⚽" && e.key) await this.reactToGoal(emit, e, room.homeScore, room.awayScore, here);
-        else if (e.key && chance(0.35)) await this.chime(emit, e, room.homeScore, room.awayScore, here);
+        if (e.emoji === "⚽" && e.key) {
+          this.goals.push(`${e.clock} ${e.text.replace(/^Goal!\s*/i, "")}`.slice(0, 90));
+          await this.reactToGoal(emit, e, room.homeScore, room.awayScore, here);
+        } else if (e.key && chance(0.35)) {
+          await this.chime(emit, e, room.homeScore, room.awayScore, here);
+        }
       }
       seen = room.events.length;
       if (room.state === "post") {
@@ -195,7 +265,6 @@ export class Lobby {
     }
   }
 
-  /** Whoever's side scored pops off; if they're not here yet, someone else does. */
   private async reactToGoal(emit: (m: LobbyMessage) => void, e: MatchEvent, hs: number, as: number, here: Set<string>): Promise<void> {
     if (this.stopped) return;
     const room = this.room!;
@@ -204,15 +273,14 @@ export class Lobby {
     const present = this.agents.filter((a) => here.has(a.name));
     if (!present.length) return;
     const speaker = present.find((a) => a.side === side) ?? pick(present);
-    const mine = speaker.backs && side && (speaker.side === side);
+    const mine = speaker.backs && side && speaker.side === side;
     const { reply } = await speaker.agent.turn(
-      `GOL! ${e.text} Skor ${room.home} ${hs}-${as} ${room.away}. ${mine ? "Tim lo yang gol — " : speaker.backs ? "Bukan tim lo yang gol — " : ""}reaksi spontan lo gimana? Santai, 1 kalimat.`,
+      `GOAL! ${e.text} It's ${room.home} ${hs}-${as} ${room.away}. ${mine ? "Your team scored — " : speaker.backs ? "Not your team — " : ""}gut reaction, one line.`,
       TURN,
     );
     emit({ kind: "agent", from: speaker.name, emoji: speaker.emoji, text: reply });
   }
 
-  /** A random present agent drops a casual line about the moment. */
   private async chime(emit: (m: LobbyMessage) => void, e: MatchEvent, hs: number, as: number, here: Set<string>): Promise<void> {
     if (this.stopped) return;
     const present = this.agents.filter((a) => here.has(a.name));
@@ -220,13 +288,12 @@ export class Lobby {
     const a = pick(present);
     const room = this.room!;
     const { reply } = await a.agent.turn(
-      `Lagi nobar, barusan: "${e.text}" (skor ${room.home} ${hs}-${as} ${room.away}). Nyeletuk santai 1 kalimat aja.`,
+      `Watching along, just saw: "${e.text}" (${room.home} ${hs}-${as} ${room.away}). Drop one casual line.`,
       TURN,
     );
     emit({ kind: "agent", from: a.name, emoji: a.emoji, text: reply });
   }
 
-  /** Everyone who's here reacts to the final score; the one who called it gloats. */
   private async closingTakes(emit: (m: LobbyMessage) => void, hs: number, as: number, here: Set<string>): Promise<void> {
     const room = this.room!;
     const winner = hs > as ? room.home : as > hs ? room.away : null;
@@ -235,8 +302,8 @@ export class Lobby {
       const right = !!a.backs && winner === a.backs;
       const { reply } = await a.agent.turn(
         a.backs
-          ? `FULL TIME ${room.home} ${hs}-${as} ${room.away}. ${winner ? `${winner} menang.` : "Seri."} Tim lo (${a.backs}) ${right ? "MENANG" : winner ? "kalah" : "seri"}. Komentar penutup santai lo?`
-          : `FULL TIME ${room.home} ${hs}-${as} ${room.away}. ${winner ? `${winner} menang.` : "Seri."} Komentar penutup santai lo (lo netral)?`,
+          ? `FULL TIME ${room.home} ${hs}-${as} ${room.away}. ${winner ? `${winner} won.` : "Draw."} Your team (${a.backs}) ${right ? "WON" : winner ? "lost" : "drew"}. Closing line?`
+          : `FULL TIME ${room.home} ${hs}-${as} ${room.away}. ${winner ? `${winner} won.` : "Draw."} You're neutral — closing line?`,
         TURN,
       );
       emit({ kind: "agent", from: a.name, emoji: a.emoji, text: reply, callback: right });
@@ -259,7 +326,6 @@ export class Lobby {
   }
 
   async close(): Promise<void> {
-    // Models are shared by id with the main chat agent — don't unload them.
     this.stopped = true;
     this.agents = [];
   }
@@ -271,6 +337,3 @@ function scoreFromGoalText(text: string, home: string, away: string): { hs: numb
   const m = text.match(new RegExp(`${esc(home)}\\s+(\\d+),\\s+${esc(away)}\\s+(\\d+)`, "i"));
   return m ? { hs: Number(m[1]), as: Number(m[2]) } : null;
 }
-
-const chance = (p: number) => Math.random() < p;
-const pick = <T>(xs: T[]): T => xs[Math.floor(Math.random() * xs.length)]!;
