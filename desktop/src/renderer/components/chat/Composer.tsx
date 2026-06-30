@@ -99,22 +99,19 @@ export function Composer({
             <span className="flex-1 text-[12.5px] text-[#C9CDD6]">Transcribing your voice… (on-device)</span>
           </>
         ) : (
-          <>
-            {value.startsWith("/") && <span className="pb-[2px] font-mono text-[14px] text-gold">/</span>}
-            <input
-              value={value.startsWith("/") ? value.slice(1) : value}
-              onChange={(e) => onChange((value.startsWith("/") ? "/" : "") + e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  onSubmit();
-                }
-              }}
-              disabled={disabled}
-              placeholder={`Message ${name}…`}
-              className="min-w-0 flex-1 bg-transparent py-2 text-[14px] text-content outline-none placeholder:text-content-faint"
-            />
-          </>
+          <input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onSubmit();
+              }
+            }}
+            disabled={disabled}
+            placeholder={`Message ${name}…`}
+            className={`min-w-0 flex-1 bg-transparent py-2 text-[14px] outline-none placeholder:text-content-faint ${value.startsWith("/") ? "font-mono text-gold-bright" : "text-content"}`}
+          />
         )}
         <button
           onClick={onMic}
