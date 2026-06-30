@@ -276,13 +276,19 @@ let mic = { recording: false, ctx: null, stream: null, node: null, chunks: [], r
 async function toggleMic() {
   if (mic.recording) return stopMic();
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const ctx = new AudioContext();
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+    // Whisper wants 16 kHz mono — capture at exactly that so it isn't fed
+    // 48 kHz audio (which it mis-reads as 3x-fast garbage → "♪♪" hallucinations).
+    const ctx = new AudioContext({ sampleRate: 16000 });
     const srcNode = ctx.createMediaStreamSource(stream);
     const node = ctx.createScriptProcessor(4096, 1, 1);
+    const mute = ctx.createGain();
+    mute.gain.value = 0; // route through a muted node so it processes without echo
     mic = { recording: true, ctx, stream, node, chunks: [], rate: ctx.sampleRate };
     node.onaudioprocess = (e) => mic.chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
-    srcNode.connect(node); node.connect(ctx.destination);
+    srcNode.connect(node); node.connect(mute); mute.connect(ctx.destination);
     micBtn.classList.add("recording"); micBtn.textContent = "■";
     addSystem(thread, "🎤 listening… tap the square to stop.");
   } catch (e) { addSystem(thread, "mic unavailable: " + (e && e.message ? e.message : e)); }
