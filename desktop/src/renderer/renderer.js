@@ -356,13 +356,10 @@ async function runCommand(raw) {
     case "img": {
       if (!arg) return addSystem(thread, "Usage: /imagine <prompt>  (e.g. /imagine Brazil lifting the trophy)");
       imgLine = null;
-      addSystem(thread, "…painting on-device (grounding on a real photo if I can find one)");
+      addSystem(thread, "…generating a celebration scene on-device (stylized art). For a real player photo, just ask me — e.g. \"foto Mbappe\".");
       const r = await window.khoros.imagine(arg);
-      if (r && r.ok && r.png) {
-        addImage(thread, r.png, r.source || arg);
-        if (r.real) addSystem(thread, `📷 ${r.source} — the real, current photo. (A generator can't reproduce a real face/kit, so the real photo IS the accurate answer.)`);
-        else if (r.grounded) addSystem(thread, `🎯 Grounded on a ${r.source} — img2img kept the real face/kit + added styling.`);
-      } else addSystem(thread, `imagine failed: ${r && r.error ? r.error : "unknown"}`);
+      if (r && r.ok && r.png) addImage(thread, r.png, arg);
+      else addSystem(thread, `imagine failed: ${r && r.error ? r.error : "unknown"}`);
       break;
     }
     case "translate":
@@ -498,6 +495,7 @@ composer.addEventListener("submit", async (e) => {
   if (result.callback) badge = { kind: "gold", label: "↩ told you so" };
   else if (result.tools && result.tools.length) badge = { kind: "tool", label: `🔧 ${result.tools.join(", ")}` };
   addMessage(thread, result.reply, "agent", badge);
+  if (result.image) addImage(thread, result.image, result.imageCaption || "");
   speakReply(result.reply);
 
   input.disabled = false;

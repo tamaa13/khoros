@@ -111,6 +111,21 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("ask", async (_e, text: string) => {
     try {
+      // Real-photo intent: asking for a photo of a player/team → fetch the ACTUAL
+      // image (Wikipedia/TheSportsDB), not a generated one. (/imagine = generated.)
+      if (/\b(foto|photo|gambar|pic|picture|tampil(?:in|kan)?|liat(?:in)?|show me|wajah|rupa)\b/i.test(text)) {
+        const cleaned = text.replace(/\b(foto|photo|gambar|pic|picture|show me|show|tampilin|tampilkan|liatin|liat|wajah|rupa|me|of|the|a|please|tolong|dong|kasih|lihat)\b/gi, " ");
+        const teamHit = Object.keys(TEAM_KITS).find((t) => text.toLowerCase().includes(t));
+        const nm = cleaned.match(/([A-Z][\w'’.\-]*(?:\s+[A-Z][\w'’.\-]*){0,2})/);
+        const subject = teamHit ?? (nm ? nm[1].trim() : "");
+        if (subject) {
+          const ref = await referenceImage(subject, Boolean(teamHit)).catch(() => null);
+          if (ref) {
+            evolve.recordTake(text);
+            return { reply: `Ini foto asli ${ref.name}:`, image: ref.bytes.toString("base64"), imageCaption: `real ${ref.kind} photo: ${ref.name}`, tools: ["photo"], callback: null };
+          }
+        }
+      }
       const { reply, callback, tools } = await agent.turn(text);
       evolve.recordTake(text); // grow the training set from the user's takes
       return { reply, callback, tools };
@@ -159,48 +174,14 @@ app.whenReady().then(async () => {
       }
       const onStep = (step: number, total: number) => send("imagine:progress", { phase: "gen", step, total });
       const onLoad = (pct: number) => send("imagine:progress", { phase: "load", pct });
-      // Ground on a REAL TheSportsDB photo when we can (accurate face/kit), then
-      // img2img it. Query: a known team in the prompt, else its leading words.
-      const teamHits = Object.keys(TEAM_KITS).filter((t) => prompt.toLowerCase().includes(t));
-      // The subject = a known team, else the leading proper-noun phrase (the name),
-      // so "Mbappe celebrating with the trophy" → "Mbappe" (the verb doesn't break it).
-      const nameMatch = prompt.match(/^\s*([A-Z][\w'’.\-]*(?:\s+[A-Z][\w'’.\-]*){0,2})/);
-      const query = teamHits[0] ?? (nameMatch ? nameMatch[1] : prompt.split(/\s+/).slice(0, 2).join(" "));
-      send("status", "looking up a real reference photo…");
-      const ref = await referenceImage(query, Boolean(teamHits[0])).catch(() => null);
+      // /imagine = a generated CELEBRATION SCENE (stylized; faces are generic but
+      // it has the trophy + scene + the right kit colours). For an ACCURATE real
+      // player photo, the user asks the agent in chat (see the "ask" handler).
       const kit = kitFor(prompt);
-      let png: Buffer | null;
-      if (ref) {
-        const scene = `${ref.name} in their national team kit, ${prompt}, vivid dramatic stadium floodlights, celebratory atmosphere, photorealistic, sharp focus, detailed realistic face`;
-        console.error("[imagine] img2img grounded on", ref.kind, ref.name, "via", ref.via);
-        // Normalize the reference (decode any format → center-square → clean
-        // baseline 768 JPEG) so sdcpp doesn't SIGABRT on odd dimensions/profiles.
-        let refBytes = ref.bytes;
-        try {
-          const img0 = nativeImage.createFromBuffer(ref.bytes);
-          if (!img0.isEmpty()) {
-            const { width, height } = img0.getSize();
-            const side = Math.min(width, height);
-            const cropped = img0.crop({ x: Math.floor((width - side) / 2), y: Math.floor((height - side) / 3), width: side, height: side });
-            refBytes = cropped.resize({ width: 768, height: 768, quality: "best" }).toJPEG(92);
-            console.error("[imagine] normalized ref", `${width}x${height}`, "→ 768x768 JPEG", refBytes.length, "bytes");
-          }
-        } catch (e: any) {
-          console.error("[imagine] normalize failed, using raw:", e?.message ?? e);
-        }
-        try {
-          png = await painter.paintFrom(refBytes, scene, onStep, onLoad);
-          if (png) return { ok: true, png: png.toString("base64"), grounded: true, source: `${ref.kind} photo: ${ref.name}` };
-        } catch (e: any) {
-          console.error("[imagine] img2img failed, falling back to the real photo:", e?.message ?? e);
-        }
-        // Robust fallback: the REAL photo is the most accurate answer anyway.
-        return { ok: true, png: ref.bytes.toString("base64"), grounded: true, real: true, source: `real ${ref.kind} photo: ${ref.name}` };
-      }
-      const framed = `A photorealistic professional sports photograph: ${prompt}.${kit ? ` Accurate kits: ${kit}.` : ""} Real adult male footballers, full squad in authentic modern kit, packed stadium under cinematic floodlights, DSLR, 8k, sharp focus, lifelike, photojournalism.`;
-      console.error("[imagine] text2img (no reference for):", JSON.stringify(query));
-      png = await painter.paint(framed, onStep, onLoad);
-      return png ? { ok: true, png: png.toString("base64"), grounded: false, source: null } : { ok: false, error: "no image produced" };
+      const framed = `A dramatic, photorealistic football celebration: ${prompt}.${kit ? ` Kit colours: ${kit}.` : ""} Players lifting the golden World Cup trophy, confetti raining down, packed roaring stadium, cinematic floodlights, vibrant, ultra-detailed, 8k.`;
+      console.error("[imagine] text2img scene:", JSON.stringify(prompt).slice(0, 60));
+      const png = await painter.paint(framed, onStep, onLoad);
+      return png ? { ok: true, png: png.toString("base64") } : { ok: false, error: "no image produced" };
     } catch (e: any) {
       console.error("[imagine] error:", e?.message ?? e);
       return { ok: false, error: String(e?.message ?? e) };
