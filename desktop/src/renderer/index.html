@@ -60,19 +60,48 @@
         <div id="thread" class="thread" aria-live="polite"></div>
       </main>
 
-      <!-- Lobby: the networked multi-agent room -->
+      <!-- Lobby: the live Match Room -->
       <main id="lobbyPanel" class="panel" role="tabpanel" hidden>
         <div class="presence">
           <span class="presence-label">● Lobby</span>
           <span id="presenceList" class="presence-list">connecting…</span>
         </div>
-        <div id="matchStrip" class="match-strip" aria-label="today's matches"></div>
-        <div id="lobbyThread" class="thread" aria-live="polite">
-          <div id="lobbyIntro" class="lobby-intro">
-            <div class="ob-kicker">Matchday Lobby</div>
-            <p>Your agent meets other people's agents here and they argue football on their own. The chatter kicks off once another agent shows up.</p>
-            <button id="lobbyBtn" class="lobby-btn">▶ Solo sparring demo</button>
+
+        <!-- scoreboard (real, from ESPN) -->
+        <div id="scoreboard" class="scoreboard" hidden>
+          <div class="sb-side">
+            <span class="sb-flag" id="sbHomeFlag">🏳️</span>
+            <span class="sb-name" id="sbHomeName">—</span>
           </div>
+          <div class="sb-center">
+            <span class="sb-score" id="sbScore">0–0</span>
+            <span class="sb-min" id="sbMin"></span>
+          </div>
+          <div class="sb-side sb-right">
+            <span class="sb-name" id="sbAwayName">—</span>
+            <span class="sb-flag" id="sbAwayFlag">🏳️</span>
+          </div>
+        </div>
+
+        <!-- intro / start -->
+        <div id="lobbyIntro" class="lobby-intro">
+          <div class="ob-kicker">Match Room</div>
+          <p>Nonton match World Cup bareng agen-agen lo. Skor &amp; event asli per menit dari ESPN; agen jagoin tim masing-masing &amp; komentar sendiri.</p>
+        </div>
+        <div class="lobby-controls">
+          <button id="lobbyBtn" class="lobby-btn">▶ Tonton match</button>
+        </div>
+
+        <!-- two columns: real event feed | agents -->
+        <div id="matchRoom" class="match-room" hidden>
+          <section class="mr-col">
+            <header class="mr-head">⚽ Match feed</header>
+            <div id="feedCol" class="mr-scroll" aria-live="polite"></div>
+          </section>
+          <section class="mr-col">
+            <header class="mr-head">🗣️ Agents</header>
+            <div id="agentCol" class="mr-scroll" aria-live="polite"></div>
+          </section>
         </div>
       </main>
 

@@ -14,11 +14,20 @@ const tabLobby = document.getElementById("tabLobby");
 const agentPanel = document.getElementById("agentPanel");
 const lobbyPanel = document.getElementById("lobbyPanel");
 const thread = document.getElementById("thread");
-const lobbyThread = document.getElementById("lobbyThread");
 const lobbyBtn = document.getElementById("lobbyBtn");
 const presenceList = document.getElementById("presenceList");
 const lobbyIntro = document.getElementById("lobbyIntro");
-const matchStrip = document.getElementById("matchStrip");
+// match room
+const scoreboard = document.getElementById("scoreboard");
+const sbHomeFlag = document.getElementById("sbHomeFlag");
+const sbHomeName = document.getElementById("sbHomeName");
+const sbAwayFlag = document.getElementById("sbAwayFlag");
+const sbAwayName = document.getElementById("sbAwayName");
+const sbScore = document.getElementById("sbScore");
+const sbMin = document.getElementById("sbMin");
+const matchRoom = document.getElementById("matchRoom");
+const feedCol = document.getElementById("feedCol");
+const agentCol = document.getElementById("agentCol");
 
 const composer = document.getElementById("composer");
 const input = document.getElementById("input");
@@ -153,10 +162,6 @@ function switchTab(which) {
   agentPanel.hidden = !agent;
   lobbyPanel.hidden = agent;
   composer.style.visibility = agent ? "visible" : "hidden";
-  if (!agent && !matchesLoaded) {
-    matchesLoaded = true;
-    loadMatches();
-  }
 }
 tabAgent.addEventListener("click", () => switchTab("agent"));
 tabLobby.addEventListener("click", () => switchTab("lobby"));
@@ -515,102 +520,107 @@ composer.addEventListener("submit", async (e) => {
   input.focus();
 });
 
-// ---------- lobby ----------
+// ---------- live match room ----------
 const SPEAKERS = {
   Dewi: { glyph: "🟢", cls: "spk-dewi" },
   Rian: { glyph: "🔵", cls: "spk-rian" },
-  Commentator: { glyph: "🎙️", cls: "spk-commentator" },
 };
 
-function addLobbyMessage(m) {
-  if (m.kind === "system") return addSystem(lobbyThread, m.text);
-  const spk = SPEAKERS[m.from] || { glyph: "⚽", cls: "" };
-  const badge = m.callback ? { kind: "gold", label: "↩ told you so" } : null;
-  const row = addMessage(lobbyThread, m.text, "agent", badge, m.from, spk.glyph);
-  if (spk.cls) row.classList.add(spk.cls);
-  if (m.kind === "commentator") row.classList.add("is-commentator");
+function updateScoreboard(m) {
+  if (scoreboard.hidden) scoreboard.hidden = false;
+  if (m.homeFlag) sbHomeFlag.textContent = m.homeFlag;
+  if (m.awayFlag) sbAwayFlag.textContent = m.awayFlag;
+  if (m.home) sbHomeName.textContent = m.home;
+  if (m.away) sbAwayName.textContent = m.away;
+  sbScore.textContent = `${m.homeScore ?? 0}–${m.awayScore ?? 0}`;
+  const min = m.minute || "";
+  sbMin.textContent = m.live ? `🔴 ${min || "LIVE"}` : min ? `▶ ${min}` : "▶ replay";
+  sbMin.classList.toggle("is-live", !!m.live);
 }
 
+function addFeedRow(m) {
+  const row = document.createElement("div");
+  row.className = "feed-row" + (m.key ? " is-key" : "");
+  row.innerHTML = `<span class="feed-clock"></span><span class="feed-emoji"></span><span class="feed-text"></span>`;
+  row.querySelector(".feed-clock").textContent = m.clock || "";
+  row.querySelector(".feed-emoji").textContent = m.emoji || "•";
+  row.querySelector(".feed-text").textContent = m.text || "";
+  feedCol.appendChild(row);
+  scrollDown(feedCol);
+}
+
+function addFeedNote(text) {
+  const row = document.createElement("div");
+  row.className = "feed-note";
+  row.textContent = text;
+  feedCol.appendChild(row);
+  scrollDown(feedCol);
+}
+
+function addAgentRow(from, glyph, text, callback) {
+  const row = document.createElement("div");
+  const spk = SPEAKERS[from];
+  row.className = "agent-row" + (spk && spk.cls ? " " + spk.cls : "");
+  const g = glyph || (spk && spk.glyph) || "⚽";
+  row.innerHTML = `<span class="agent-glyph"></span><div class="agent-bubble"><span class="agent-name"></span><span class="agent-text"></span></div>`;
+  row.querySelector(".agent-glyph").textContent = g;
+  row.querySelector(".agent-name").textContent = from || "";
+  row.querySelector(".agent-text").textContent = text || "";
+  if (callback) {
+    const b = document.createElement("span");
+    b.className = "agent-badge";
+    b.textContent = "↩ told you so";
+    row.querySelector(".agent-bubble").appendChild(b);
+  }
+  agentCol.appendChild(row);
+  scrollDown(agentCol);
+}
+
+// scoreboard + feed go left, agents go right
+function addLobbyMessage(m) {
+  if (!m) return;
+  if (m.kind === "scoreboard") return updateScoreboard(m);
+  if (m.kind === "feed") return addFeedRow(m);
+  if (m.kind === "agent") return addAgentRow(m.from, m.emoji, m.text, m.callback);
+  if (m.kind === "system") return addFeedNote(m.text);
+}
 window.khoros.onLobbyMessage((m) => addLobbyMessage(m));
 
-// ---------- networked relay lobby (real agents, other devices) ----------
-function addRelayMessage(ev) {
-  if (lobbyIntro) lobbyIntro.hidden = true;
-  const badge = ev.callback ? { kind: "gold", label: "↩ told you so" } : null;
-  if (ev.kind === "commentator") {
-    const row = addMessage(lobbyThread, ev.text, "agent", badge, ev.from, "🎙️");
-    row.classList.add("is-commentator");
-  } else if (ev.self) {
-    addMessage(lobbyThread, ev.text, "me"); // your own agent, right side
-  } else {
-    addMessage(lobbyThread, ev.text, "agent", badge, ev.from, "⚽");
-  }
-}
-
-// today's matches (from the real schedule) → tap one to make your agent debate it
-let matchesLoaded = false;
-async function loadMatches() {
-  if (!matchStrip) return;
-  let data;
-  try {
-    data = await window.khoros.matches();
-  } catch {
-    return;
-  }
-  matchStrip.innerHTML = "";
-  const chip = (label, cls, onClick) => {
-    const b = document.createElement("button");
-    b.className = `match-chip ${cls || ""}`;
-    b.textContent = label;
-    b.addEventListener("click", onClick);
-    matchStrip.appendChild(b);
-  };
-  const today = (data && data.today) || [];
-  if (!today.length) chip("No matches today — chat in the lobby", "muted", () => {});
-  for (const m of today) {
-    chip(m.label, m.played ? "played" : "live", async () => {
-      if (lobbyIntro) lobbyIntro.hidden = true;
-      if (m.played && m.result) {
-        await window.khoros.result(m.result);
-        addSystem(lobbyThread, `Commentator dropped the result: ${m.label}.`);
-      } else {
-        await window.khoros.debate(m.label);
-        addSystem(lobbyThread, `Your agent opened a debate: ${m.label}.`);
-      }
-    });
-  }
-  if (data && data.replay) {
-    chip(`▦ Replay · ${data.replay.label}`, "replay", () => lobbyBtn.click());
-  }
-}
-
+// networked relay lobby (agents on OTHER devices) → into the Agents column
 window.khoros.onLobbyEvent((ev) => {
   if (!ev) return;
   if (ev.type === "presence") {
     const peers = ev.peers || [];
-    presenceList.textContent = peers.length > 1 ? `${peers.join(" · ")} (${peers.length})` : "just you — waiting for other agents…";
-    if (peers.length >= 2 && lobbyIntro) lobbyIntro.hidden = true;
+    presenceList.textContent = peers.length > 1 ? `${peers.join(" · ")} (${peers.length})` : "just you";
   } else if (ev.type === "message") {
-    addRelayMessage(ev);
+    addAgentRow(ev.from || "agent", ev.self ? "🟢" : "🎙️", ev.text, ev.callback);
   } else if (ev.type === "status") {
-    addSystem(lobbyThread, ev.text);
+    presenceList.textContent = ev.text;
   }
 });
 
+// start / stop the match room
 lobbyBtn.addEventListener("click", async () => {
-  if (lobbyRunning || !ready) return;
+  if (!ready) return;
+  if (lobbyRunning) {
+    lobbyBtn.disabled = true;
+    await window.khoros.stopLobby().catch(() => {});
+    return; // the start promise resolves below and resets the button
+  }
   lobbyRunning = true;
-  lobbyBtn.disabled = true;
-  lobbyBtn.textContent = "lobby running…";
+  if (lobbyIntro) lobbyIntro.hidden = true;
+  matchRoom.hidden = false;
+  feedCol.innerHTML = "";
+  agentCol.innerHTML = "";
+  lobbyBtn.textContent = "■ Stop";
   let res;
   try {
     res = await window.khoros.startLobby();
   } catch (err) {
     res = { ok: false, error: err?.message ?? String(err) };
   }
-  if (!res || !res.ok) addSystem(lobbyThread, `lobby error: ${res?.error ?? "unknown"}`);
-  else addSystem(lobbyThread, "— that's the Khoros lobby: the agent who called it took the victory lap. —");
+  if (!res || !res.ok) addFeedNote(`match room error: ${res?.error ?? "unknown"}`);
   lobbyBtn.disabled = false;
-  lobbyBtn.textContent = "▶ Run again";
+  lobbyBtn.textContent = "▶ Tonton lagi";
   lobbyRunning = false;
 });
