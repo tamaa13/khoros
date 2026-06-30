@@ -121,6 +121,35 @@ app.whenReady().then(async () => {
   ipcMain.handle("evolve:status", () => ({ ...evolve.status(), applied: Boolean(adapter), cap: evolve.capability() }));
 
   // On-device image generation (QVAC Stable Diffusion). Lazy-loaded painter.
+  // Generative models can't render specific real faces/kits, but we can at least
+  // get each team's correct kit palette into the prompt (generalizes per team).
+  const TEAM_KITS: Record<string, string> = {
+    brazil: "bright yellow jersey with green trim, blue shorts",
+    argentina: "light blue and white vertical striped jersey, black shorts",
+    france: "dark blue jersey, white shorts",
+    england: "white jersey, navy shorts",
+    spain: "red jersey, navy shorts",
+    germany: "white jersey with black trim, black shorts",
+    portugal: "dark red jersey, green trim",
+    netherlands: "bright orange jersey, white shorts",
+    italy: "azure blue jersey, white shorts",
+    belgium: "red jersey with black and yellow trim",
+    croatia: "red and white checkerboard jersey",
+    uruguay: "sky blue jersey, black shorts",
+    mexico: "green jersey, white shorts",
+    morocco: "red jersey, green trim",
+    japan: "deep blue jersey",
+    "south korea": "red jersey, navy shorts",
+    usa: "white jersey with red and blue accents",
+    canada: "red jersey, white trim",
+    senegal: "white and green jersey",
+  };
+  const kitFor = (prompt: string): string => {
+    const lower = prompt.toLowerCase();
+    const hits = Object.keys(TEAM_KITS).filter((t) => lower.includes(t));
+    return hits.length ? hits.map((t) => `${t} in a ${TEAM_KITS[t]}`).join("; ") : "";
+  };
+
   let painter: any = null;
   ipcMain.handle("imagine", async (_e, prompt: string) => {
     try {
@@ -130,7 +159,8 @@ app.whenReady().then(async () => {
         painter = new Painter();
         await painter.init((pct: number) => send("imagine:progress", { phase: "load", pct }));
       }
-      const framed = `A photorealistic, hyperrealistic professional sports photograph: ${prompt}. Real footballers, the full team squad in authentic kit, packed stadium under cinematic floodlights, shot on a DSLR with an 85mm lens, ultra-detailed, 8k, sharp focus, lifelike.`;
+      const kit = kitFor(prompt);
+      const framed = `A photorealistic, hyperrealistic professional sports photograph: ${prompt}.${kit ? ` Accurate kits: ${kit}.` : ""} Real adult male footballers, the full team squad in authentic modern kit, packed stadium under cinematic floodlights, shot on a DSLR with an 85mm lens, ultra-detailed faces, 8k, sharp focus, lifelike, photojournalism.`;
       console.error("[imagine]", JSON.stringify(prompt).slice(0, 80));
       const png = await painter.paint(framed, (step: number, total: number) => send("imagine:progress", { phase: "gen", step, total }));
       return png ? { ok: true, png: png.toString("base64") } : { ok: false, error: "no image produced" };
