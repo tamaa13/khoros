@@ -49,7 +49,7 @@ export function LobbyPanel({ active }: { active: boolean }) {
           goalTimer.current = setTimeout(() => setGoal(false), 2600);
         }
         totalRef.current = total;
-        setScore({ home: m.home ?? "", away: m.away ?? "", homeFlag: m.homeFlag ?? "🏳️", awayFlag: m.awayFlag ?? "🏳️", hs: m.homeScore ?? 0, as: m.awayScore ?? 0, minute: m.minute ?? "", live: !!m.live });
+        setScore({ home: m.home ?? "", away: m.away ?? "", homeFlag: m.homeFlag ?? "🏳️", awayFlag: m.awayFlag ?? "🏳️", hs: m.homeScore ?? 0, as: m.awayScore ?? 0, minute: m.minute ?? "", live: !!m.live, phase: m.phase ?? (m.live ? "in" : "post") });
       } else if (m.kind === "feed") {
         setFeed((f) => [...f, { id: ++rid, clock: m.clock, emoji: m.emoji, text: m.text ?? "", key: m.key }]);
       } else if (m.kind === "agent") {

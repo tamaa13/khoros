@@ -55,6 +55,7 @@ export interface LobbyMessage {
   awayScore?: number;
   minute?: string;
   live?: boolean;
+  phase?: "pre" | "in" | "post";
   // feed
   clock?: string;
   emoji?: string;
