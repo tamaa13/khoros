@@ -22,14 +22,53 @@ export interface Fixture {
   city?: string;
 }
 
+const WIKI_UA = "KhorosApp/1.0 (World Cup watch-mate; s0nderlabs.hq@gmail.com)";
+
 async function dl(url: string): Promise<Buffer | null> {
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(20000) });
+    const r = await fetch(url, { headers: { "User-Agent": WIKI_UA }, signal: AbortSignal.timeout(20000) });
     if (!r.ok) return null;
     return Buffer.from(await r.arrayBuffer());
   } catch {
     return null;
   }
+}
+
+// Resolve a loose query to a Wikipedia page title (handles accents/aliases).
+async function wikiTitle(query: string): Promise<string | null> {
+  try {
+    const r = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=1&namespace=0&format=json`,
+      { headers: { "User-Agent": WIKI_UA }, signal: AbortSignal.timeout(12000) },
+    );
+    const j: any = await r.json().catch(() => []);
+    return j?.[1]?.[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// A real, current, CC-licensed PHOTO from Wikipedia (player pages have actual
+// match photos in the national kit; team pages only have crests, so we skip
+// those by requiring a .jpg lead image).
+async function wikiRef(query: string): Promise<ImageRef | null> {
+  try {
+    const title = (await wikiTitle(`${query} footballer`)) ?? (await wikiTitle(query));
+    if (!title) return null;
+    const r = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`, {
+      headers: { "User-Agent": WIKI_UA },
+      signal: AbortSignal.timeout(12000),
+    });
+    const j: any = await r.json().catch(() => ({}));
+    const thumb: string | undefined = j?.thumbnail?.source;
+    if (!thumb || !/\.jpe?g/i.test(thumb)) return null; // real photo only, not a crest/SVG
+    const big = thumb.replace(/\/\d+px-/, "/768px-"); // bump the thumb to a usable size
+    const bytes = (await dl(big)) ?? (await dl(thumb));
+    if (bytes) return { bytes, kind: "player", name: j.title ?? title, via: "wikimedia" };
+  } catch {
+    /* none */
+  }
+  return null;
 }
 
 export interface ImageRef {
@@ -69,13 +108,17 @@ async function teamRef(q: string): Promise<ImageRef | null> {
   return null;
 }
 
-/** A real reference image (player cutout = real face+kit, or team fanart/jersey)
- *  from TheSportsDB, for img2img grounding. `preferTeam` searches the team first
- *  (so "Brazil" → the team, not a player whose surname is "Brazill"). */
+/** A real reference image for img2img grounding. Players → Wikipedia (current,
+ *  CC-licensed match photos in the national kit), falling back to TheSportsDB.
+ *  Teams → TheSportsDB fanart (Wikipedia team pages are just crests). `preferTeam`
+ *  routes "Brazil" to the team, not a player whose surname is "Brazill". */
 export async function referenceImage(query: string, preferTeam = false): Promise<ImageRef | null> {
-  const q = encodeURIComponent(query.trim());
-  if (!q) return null;
-  return preferTeam ? (await teamRef(q)) ?? (await playerRef(q)) : (await playerRef(q)) ?? (await teamRef(q));
+  const trimmed = query.trim();
+  if (!trimmed) return null;
+  const q = encodeURIComponent(trimmed);
+  return preferTeam
+    ? (await teamRef(q)) ?? (await wikiRef(trimmed)) ?? (await playerRef(q))
+    : (await wikiRef(trimmed)) ?? (await playerRef(q)) ?? (await teamRef(q));
 }
 
 // ---- ESPN fixtures/scores ----
