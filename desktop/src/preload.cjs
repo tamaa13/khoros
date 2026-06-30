@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld("khoros", {
   setSettings: (patch) => ipcRenderer.invoke("settings:set", patch),
   // on-device text-to-speech (QVAC) → returns base64 WAV
   speak: (text) => ipcRenderer.invoke("tts:speak", text),
+  // on-device translation (QVAC Bergamot NMT)
+  translate: (text, from, to) => ipcRenderer.invoke("translate", text, from, to),
   // slash-command backing
   memories: () => ipcRenderer.invoke("memories"),
   recall: (q) => ipcRenderer.invoke("recall", q),
