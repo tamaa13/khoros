@@ -66,12 +66,26 @@ export class Painter {
 
   /** Image-to-image over a real reference (SD 2.1). Low strength keeps the real
    *  face/kit; the model adds the scene/styling. */
-  async paintFrom(refBytes: Buffer, prompt: string, onStep?: (s: number, t: number) => void, onLoad?: (p: number) => void): Promise<Buffer | null> {
+  async paintFrom(
+    refBytes: Buffer,
+    prompt: string,
+    onStep?: (s: number, t: number) => void,
+    onLoad?: (p: number) => void,
+    strength = 0.3,
+  ): Promise<Buffer | null> {
     await this.ensure("sd", onLoad);
-    return this.collect(
-      Q.diffusion({ modelId: this.modelId, prompt, init_image: new Uint8Array(refBytes), width: 768, height: 768, strength: 0.45, steps: 30, seed: -1 }),
-      onStep,
-    );
+    // Low strength keeps the real face/kit from the reference photo; the model
+    // only lightly restyles. (negative_prompt/cfg_scale crash this sdcpp build.)
+    try {
+      return await this.collect(
+        Q.diffusion({ modelId: this.modelId, prompt, init_image: new Uint8Array(refBytes), width: 768, height: 768, strength, steps: 30, seed: -1 }),
+        onStep,
+      );
+    } catch (e) {
+      this.modelId = undefined; // worker may have died — force a fresh load next time
+      this.mode = undefined;
+      throw e;
+    }
   }
 
   async close(): Promise<void> {
