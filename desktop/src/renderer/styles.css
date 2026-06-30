@@ -256,6 +256,13 @@ body {
 #input::placeholder { color: #5a7268; }
 #input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(47, 210, 126, 0.14); }
 #input:disabled { opacity: 0.5; }
+.mic {
+  width: 42px; flex-shrink: 0; display: grid; place-items: center;
+  border: 1px solid var(--line-2); border-radius: 13px; cursor: pointer; font-size: 16px;
+  background: #0a1712; color: var(--text); transition: transform 0.12s, border-color 0.15s, background 0.15s;
+}
+.mic:hover { border-color: var(--accent); transform: translateY(-1px); }
+.mic.recording { background: rgba(229, 90, 90, 0.18); border-color: #e55a5a; color: #e55a5a; }
 #send {
   width: 42px; flex-shrink: 0; display: grid; place-items: center;
   border: none; border-radius: 13px; color: #06140d; cursor: pointer;

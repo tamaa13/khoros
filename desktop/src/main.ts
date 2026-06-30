@@ -140,6 +140,49 @@ app.whenReady().then(async () => {
     }
   });
 
+  // On-device speech-to-text (QVAC Whisper). Lazy-loaded listener.
+  let listener: any = null;
+  async function ensureListener(): Promise<boolean> {
+    if (listener) return true;
+    try {
+      send("status", "loading the on-device ear…");
+      const { Listener } = await import("../../agent/transcribe");
+      const l = new Listener();
+      await l.init();
+      listener = l;
+      return true;
+    } catch (e: any) {
+      console.error("[stt] load failed:", e?.message ?? e);
+      return false;
+    }
+  }
+  ipcMain.handle("transcribe", async (_e, base64Wav: string) => {
+    try {
+      if (!(await ensureListener())) return { ok: false, error: "stt model failed to load" };
+      const text = await listener.transcribe(Buffer.from(base64Wav, "base64"));
+      console.error("[stt] transcribed:", JSON.stringify(text).slice(0, 100));
+      return { ok: true, text };
+    } catch (e: any) {
+      console.error("[stt] error:", e?.message ?? e);
+      return { ok: false, error: String(e?.message ?? e) };
+    }
+  });
+  // Round-trip self-test (no mic needed): synth a phrase, transcribe it back.
+  ipcMain.handle("stt:selftest", async () => {
+    try {
+      if (!(await ensureVoice())) return { ok: false, error: "tts failed" };
+      const phrase = "Brazil are winning the World Cup this year.";
+      const wav = await voice.synth(phrase);
+      if (!wav) return { ok: false, error: "synth failed" };
+      if (!(await ensureListener())) return { ok: false, error: "stt failed" };
+      const text = await listener.transcribe(wav);
+      return { ok: true, original: phrase, transcribed: text };
+    } catch (e: any) {
+      console.error("[stt:selftest] error:", e?.message ?? e);
+      return { ok: false, error: String(e?.message ?? e) };
+    }
+  });
+
   // Settings (name / language / voice) — read + update, persisted to disk.
   ipcMain.handle("settings:get", () => ({ ...settings }));
   ipcMain.handle("settings:set", (_e, patch: Partial<Settings>) => {
