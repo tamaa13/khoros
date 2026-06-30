@@ -177,6 +177,32 @@ function addSystem(threadEl, text) {
   scrollDown(threadEl);
 }
 
+// Render a generated image (base64 PNG) as an agent message.
+function addImage(threadEl, base64, caption) {
+  const row = document.createElement("div");
+  row.className = "row agent";
+  row.appendChild(makeAvatar("🎨"));
+  const col = document.createElement("div");
+  col.className = "col";
+  const bubble = document.createElement("div");
+  bubble.className = "bubble img";
+  const img = document.createElement("img");
+  img.src = "data:image/png;base64," + base64;
+  img.alt = caption || "generated image";
+  bubble.appendChild(img);
+  if (caption) {
+    const c = document.createElement("div");
+    c.className = "img-caption";
+    c.textContent = caption;
+    bubble.appendChild(c);
+  }
+  col.appendChild(bubble);
+  row.appendChild(col);
+  threadEl.appendChild(row);
+  scrollDown(threadEl);
+  return row;
+}
+
 function addTyping(threadEl) {
   const row = document.createElement("div");
   row.className = "row agent";
@@ -246,6 +272,7 @@ const HELP = [
   "/name <name> — rename your agent",
   "/language <lang> — reply language (e.g. /language Indonesian, /language English)",
   "/voice on|off — spoken replies (on-device TTS)",
+  "/imagine <prompt> — generate an image on-device (Stable Diffusion)",
   "/translate <text> — on-device translation (e.g. id→en); /translate es:en <text>",
   "/listen — voice input (on-device STT); /listen test — TTS→STT self-test",
   "/evolve — fine-tune your agent on your style (on-device LoRA; auto on capable devices)",
@@ -283,6 +310,15 @@ async function runCommand(raw) {
       const isEnglish = /^(en|english)$/i.test(v);
       await window.khoros.setSettings({ language: isEnglish ? "" : v });
       addSystem(thread, `Language set to ${isEnglish ? "English" : v}.`);
+      break;
+    }
+    case "imagine":
+    case "img": {
+      if (!arg) return addSystem(thread, "Usage: /imagine <prompt>  (e.g. /imagine Brazil lifting the trophy)");
+      addSystem(thread, "…painting on-device (first run loads the Stable Diffusion model)");
+      const r = await window.khoros.imagine(arg);
+      if (r && r.ok && r.png) addImage(thread, r.png, arg);
+      else addSystem(thread, `imagine failed: ${r && r.error ? r.error : "unknown"}`);
       break;
     }
     case "translate":

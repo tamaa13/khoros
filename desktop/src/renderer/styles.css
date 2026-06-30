@@ -212,6 +212,11 @@ body {
 .presence-label { font-size: 10.5px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; }
 .presence-list { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* generated image bubble (/imagine) */
+.bubble.img { padding: 4px; max-width: 260px; }
+.bubble.img img { width: 100%; border-radius: 9px; display: block; }
+.bubble.img .img-caption { font-size: 11px; color: var(--muted); padding: 5px 4px 2px; }
+
 /* lobby match strip (today's matches from the schedule) */
 .match-strip { display: flex; gap: 7px; padding: 8px 14px; overflow-x: auto; border-bottom: 1px solid var(--line); }
 .match-strip::-webkit-scrollbar { height: 0; }
