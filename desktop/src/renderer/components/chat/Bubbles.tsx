@@ -27,10 +27,13 @@ export function AgentBubble({ text, tools }: { text: string; tools?: string[] })
   );
 }
 
-export function UserBubble({ text }: { text: string }) {
+export function UserBubble({ text, image }: { text: string; image?: string }) {
   return (
     <div className="flex justify-end animate-rise">
-      <div className="max-w-[78%] rounded-[16px_16px_5px_16px] border border-[rgb(var(--c34373f))] bg-[rgb(var(--c22242b))] px-[14px] py-[11px] text-[14px] leading-[1.5] text-content">{text}</div>
+      <div className="max-w-[78%] overflow-hidden rounded-[16px_16px_5px_16px] border border-[rgb(var(--c34373f))] bg-[rgb(var(--c22242b))] text-[14px] leading-[1.5] text-content">
+        {image && <img src={`data:image/jpeg;base64,${image}`} alt="shared" className="block max-h-[220px] w-full object-cover" />}
+        {text && <div className="px-[14px] py-[11px]">{text}</div>}
+      </div>
     </div>
   );
 }

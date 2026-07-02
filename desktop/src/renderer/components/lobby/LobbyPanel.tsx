@@ -26,11 +26,16 @@ export function LobbyPanel({ active }: { active: boolean }) {
 
   // The Lounge auto-discussion (the user's agent + a house pundit) only runs
   // while the user is actually looking at the picker — pause it otherwise.
+  // Never send the initial "off" — the handler registers after agent.init, so an
+  // eager call on mount just logs a "no handler" error.
+  const loungeWasOn = useRef(false);
   useEffect(() => {
     const on = active && view === "picker";
-    void khoros.loungeActive(on);
+    if (!on && !loungeWasOn.current) return;
+    loungeWasOn.current = on || loungeWasOn.current;
+    void khoros.loungeActive(on).catch(() => {});
     return () => {
-      if (on) void khoros.loungeActive(false);
+      if (on) void khoros.loungeActive(false).catch(() => {});
     };
   }, [active, view]);
 
