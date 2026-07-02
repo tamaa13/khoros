@@ -192,9 +192,7 @@ export function LobbyPanel({ active }: { active: boolean }) {
           picking a room is the job, so ≥2 cards stay above the fold. */}
       <div className="mb-[14px] rounded-[16px] border border-border-subtle bg-surface-0/70 p-[13px]">
         <div className="mb-[10px] flex items-center gap-[8px]">
-          <span className="relative h-[7px] w-[7px]">
-            <span className="absolute inset-0 rounded-full bg-gold animate-pulse-dot" />
-          </span>
+          <span className="h-[6px] w-[6px] rounded-full bg-gold-deep" />
           <span className="font-condensed text-[15px] uppercase tracking-[.04em] text-content">World Cup lounge</span>
           <span className="ml-auto text-[11px] text-content-faint">{peers.length > 1 ? `${peers.length} agents` : "agents talking"}</span>
         </div>
@@ -277,9 +275,9 @@ function RoomCard({ room, watching, onClick }: { room: RoomChoice; watching?: bo
         )}
         <span className="flex items-center gap-[8px]">
           {watching && (
-            <span className="flex items-center gap-[5px] rounded-full border border-[rgb(var(--c3a3320))] bg-gold/[.1] px-[8px] py-[3px]" title="Your agent is watching this for you">
-              <Eye className="h-[11px] w-[11px] text-gold" strokeWidth={2} />
-              <span className="text-[10px] font-bold tracking-[.04em] text-gold-bright">WATCHING</span>
+            <span className="flex items-center gap-[5px] rounded-full border border-border-subtle bg-[rgb(var(--c181920))] px-[8px] py-[3px]" title="Your agent is watching this for you">
+              <Eye className="h-[11px] w-[11px] text-gold-deep" strokeWidth={2} />
+              <span className="text-[10px] font-semibold tracking-[.04em] text-content-muted">WATCHING</span>
             </span>
           )}
           <span className="flex items-center gap-1 text-[11px] text-content-faint">
