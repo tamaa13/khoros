@@ -50,11 +50,9 @@ export function AppHeader({ name, tab, onTab, onRename, voice, onVoiceChange, la
             <Pencil className="h-[13px] w-[13px] text-content-faint" strokeWidth={1.75} />
           </button>
         )}
-        <span className="ml-auto flex items-center gap-[7px] rounded-full border border-[rgb(var(--c3d3621))] bg-gold/[.07] py-[5px] pl-[9px] pr-[10px]">
-          <span className="relative h-[7px] w-[7px]">
-            <span className="absolute inset-0 rounded-full bg-gold animate-pulse-dot" />
-          </span>
-          <span className="text-[10.5px] font-semibold text-gold-bright">on-device</span>
+        <span className="ml-auto flex items-center gap-[6px] rounded-full border border-border-subtle bg-[rgb(var(--c111217))] py-[5px] pl-[9px] pr-[10px]" title="All inference runs on this machine">
+          <span className="h-[6px] w-[6px] rounded-full bg-gold-deep" />
+          <span className="text-[10.5px] font-medium text-content-muted">on-device</span>
         </span>
         {tab === "agent" && (
           <button onClick={onToggleSearch} className={`flex h-[32px] w-[32px] items-center justify-center rounded-md border transition-colors ${searchOpen ? "border-gold-deep bg-gold/[.08] text-gold" : "border-border-subtle bg-[rgb(var(--c111217))] text-content-muted hover:text-content"}`} aria-label="Search this chat">

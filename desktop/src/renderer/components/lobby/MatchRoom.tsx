@@ -60,16 +60,22 @@ export function MatchRoom({ score, feed, crew, watching, goal, onBack, banner, o
       {/* left the room mid-replay (resume) or after full time (rewatch) —
           watching again is a choice, never forced */}
       {banner && (
-        <div className="flex flex-shrink-0 items-center gap-[10px] border-b border-[rgb(var(--c3a3320))] bg-gold/[.08] px-[14px] py-[8px] animate-rise">
-          <span className="min-w-0 flex-1 text-[12px] leading-[1.35] text-gold-bright">{banner === "resume" ? "Paused where you left off." : "Full time — you watched this one."}</span>
-          {banner === "resume" && (
-            <button onClick={onResume} className="flex items-center gap-[5px] rounded-full bg-gold px-[11px] py-[5px] text-[11.5px] font-bold text-gold-fg transition-transform hover:-translate-y-px">
-              <Play className="h-[11px] w-[11px]" strokeWidth={2.5} /> Resume
+        <div className="flex flex-shrink-0 items-center gap-[10px] border-b border-[rgb(var(--c1f2128))] bg-[rgb(var(--c0c0d11))] px-[14px] py-[8px] animate-rise">
+          <span className="min-w-0 flex-1 text-[12px] leading-[1.35] text-content-muted">{banner === "resume" ? "Paused where you left off." : "Full time — you watched this one."}</span>
+          {banner === "resume" ? (
+            <>
+              <button onClick={onResume} className="flex items-center gap-[5px] rounded-full bg-gold px-[11px] py-[5px] text-[11.5px] font-bold text-gold-fg transition-transform hover:-translate-y-px">
+                <Play className="h-[11px] w-[11px]" strokeWidth={2.5} /> Resume
+              </button>
+              <button onClick={onRestart} className="flex items-center gap-[5px] rounded-full border border-border px-[11px] py-[5px] text-[11.5px] font-medium text-content-muted transition-colors hover:text-content">
+                <RotateCcw className="h-[11px] w-[11px]" strokeWidth={2.25} /> Start over
+              </button>
+            </>
+          ) : (
+            <button onClick={onRestart} className="flex items-center gap-[5px] rounded-full bg-gold px-[11px] py-[5px] text-[11.5px] font-bold text-gold-fg transition-transform hover:-translate-y-px">
+              <RotateCcw className="h-[11px] w-[11px]" strokeWidth={2.25} /> Watch again
             </button>
           )}
-          <button onClick={onRestart} className="flex items-center gap-[5px] rounded-full border border-[rgb(var(--c3a3320))] px-[11px] py-[5px] text-[11.5px] font-semibold text-gold-bright transition-colors hover:bg-gold/[.12]">
-            <RotateCcw className="h-[11px] w-[11px]" strokeWidth={2.25} /> {banner === "resume" ? "Start over" : "Watch again"}
-          </button>
         </div>
       )}
 
@@ -87,7 +93,7 @@ export function MatchRoom({ score, feed, crew, watching, goal, onBack, banner, o
                 <span className="text-[10.5px] font-extrabold tracking-[.08em] text-live-bright">LIVE</span>
               </span>
             ) : score.phase === "pre" ? (
-              <span className="rounded-full border border-gold/40 bg-gold/[.12] px-[9px] py-[3px] text-[10.5px] font-bold tracking-[.06em] text-gold-bright">UPCOMING</span>
+              <span className="rounded-full border border-border-subtle bg-[rgb(var(--c181920))] px-[9px] py-[3px] text-[10.5px] font-bold tracking-[.06em] text-content-muted">UPCOMING</span>
             ) : (
               <span className="rounded-full border border-border-subtle bg-[rgb(var(--c181920))] px-[9px] py-[3px] text-[10.5px] font-bold tracking-[.06em] text-content-muted">REPLAY</span>
             )}
