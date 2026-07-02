@@ -26,6 +26,7 @@ export interface LobbyMessage {
   minute?: string;
   live?: boolean;
   phase?: "pre" | "in" | "post";
+  idx?: number; // event index — lets the renderer resume a left room precisely
   clock?: string;
   emoji?: string;
   key?: boolean;
@@ -52,13 +53,26 @@ export class Lobby {
   private live = false;
   private stopped = false;
   private goals: string[] = [];
+  private wake: (() => void) | null = null;
+
+  // Interruptible sleep — stop() wakes it so leaving a room frees the engine in
+  // milliseconds instead of holding it through a 25s live-poll nap.
+  private nap(ms: number): Promise<void> {
+    return new Promise((r) => {
+      this.wake = r;
+      setTimeout(r, ms);
+    });
+  }
 
   /** `userAgent` is the user's own agent (the My Agent chat agent) — it watches
-   *  the match as the user's representative. A house Commentator is spun up here. */
+   *  the match as the user's representative. A house Commentator is spun up here.
+   *  `startAt` resumes from that event index (leave → re-enter continues where
+   *  the user left off instead of restarting the whole replay). */
   constructor(
     private readonly dataDir: string,
     private readonly userAgent: Agent,
     private readonly userName: string,
+    private readonly startAt = 0,
   ) {}
 
   async init(onStatus: (s: string) => void = () => {}, matchId?: string): Promise<void> {
@@ -90,6 +104,7 @@ export class Lobby {
 
   stop(): void {
     this.stopped = true;
+    this.wake?.();
   }
 
   summary(): string {
@@ -119,15 +134,23 @@ export class Lobby {
 
     if (room.state === "pre") return this.runPre(emit);
 
+    const resuming = this.startAt > 0;
     emit({
       kind: "system",
       text: this.live
-        ? `🔴 LIVE — ${room.home} vs ${room.away}. Real-time from ESPN.`
-        : `▶ Replay — ${room.home} vs ${room.away}. Real events, played back.`,
+        ? resuming
+          ? `🔴 Back in — catching up on ${room.home} vs ${room.away}.`
+          : `🔴 LIVE — ${room.home} vs ${room.away}. Real-time from ESPN.`
+        : resuming
+          ? `▶ Resuming — ${room.home} vs ${room.away}, right where you left off.`
+          : `▶ Replay — ${room.home} vs ${room.away}. Real events, played back.`,
     });
 
-    await this.say(this.house, `${room.home} vs ${room.away} is underway. Set the scene in one punchy line.`, emit);
-    await this.say(this.user, `${room.home} vs ${room.away} is on. Give your quick prediction — who wins, what score?`, emit);
+    // Opening banter only on a fresh watch — resuming shouldn't redo predictions.
+    if (!resuming) {
+      await this.say(this.house, `${room.home} vs ${room.away} is underway. Set the scene in one punchy line.`, emit);
+      await this.say(this.user, `${room.home} vs ${room.away} is on. Give your quick prediction — who wins, what score?`, emit);
+    }
 
     if (this.live) await this.runLive(emit);
     else await this.runReplay(emit);
@@ -139,7 +162,7 @@ export class Lobby {
     await this.say(this.house, `${room.home} vs ${room.away} kicks off at ${room.kickoff}. Tee it up in one hyped line.`, emit);
     await this.say(this.user, `${room.home} vs ${room.away} starts at ${room.kickoff}. Pre-match prediction, one line.`, emit);
     while (!this.stopped) {
-      await sleep(60000);
+      await this.nap(60000);
       const r = await matchRoom(room.id);
       if (!r) continue;
       this.room = r;
@@ -157,9 +180,23 @@ export class Lobby {
     const room = this.room!;
     let hs = 0;
     let as = 0;
-    for (const e of room.events) {
+    // Fast-forward silently through everything already watched so the
+    // scoreboard resumes correct (goals before startAt still count).
+    for (const e of room.events.slice(0, this.startAt)) {
+      if (e.emoji === "⚽" && e.key) {
+        const sc = scoreFromGoalText(e.text, room.home, room.away);
+        if (sc) {
+          hs = sc.hs;
+          as = sc.as;
+        }
+        this.goals.push(`${e.clock} ${e.text.replace(/^Goal!\s*/i, "")}`.slice(0, 90));
+      }
+    }
+    if (this.startAt > 0) this.emitScore(emit, hs, as, room.events[this.startAt - 1]?.clock || undefined);
+    for (let i = this.startAt; i < room.events.length; i++) {
+      const e = room.events[i]!;
       if (this.stopped) return;
-      emit({ kind: "feed", clock: e.clock, emoji: e.emoji, text: e.text, key: e.key });
+      emit({ kind: "feed", idx: i, clock: e.clock, emoji: e.emoji, text: e.text, key: e.key });
       const isGoal = e.emoji === "⚽" && e.key;
       if (isGoal) {
         const sc = scoreFromGoalText(e.text, room.home, room.away);
@@ -177,7 +214,7 @@ export class Lobby {
       } else if (e.key && chance(0.3)) {
         await this.say(this.user, `Watching along, just saw: "${e.text}". One casual line.`, emit);
       }
-      await sleep(2200);
+      await this.nap(2200);
     }
     if (this.stopped) return;
     this.emitScore(emit, room.homeScore, room.awayScore, "FT");
@@ -186,18 +223,18 @@ export class Lobby {
   }
 
   private async runLive(emit: (m: LobbyMessage) => void): Promise<void> {
-    let seen = 0;
+    let seen = this.startAt; // re-entering a live room catches up, not repeats
     while (!this.stopped) {
       const room = await matchRoom(this.room!.id);
       if (!room) {
-        await sleep(20000);
+        await this.nap(20000);
         continue;
       }
       this.room = room;
       this.emitScore(emit, room.homeScore, room.awayScore, room.minute);
       for (let i = seen; i < room.events.length; i++) {
         const e = room.events[i]!;
-        emit({ kind: "feed", clock: e.clock, emoji: e.emoji, text: e.text, key: e.key });
+        emit({ kind: "feed", idx: i, clock: e.clock, emoji: e.emoji, text: e.text, key: e.key });
         if (e.emoji === "⚽" && e.key) {
           this.goals.push(`${e.clock} ${e.text.replace(/^Goal!\s*/i, "")}`.slice(0, 90));
           await this.say(this.house, `GOAL! ${e.text} It's ${room.home} ${room.homeScore}-${room.awayScore} ${room.away}. One excited line.`, emit);
@@ -210,7 +247,7 @@ export class Lobby {
         await this.closing(emit, room.homeScore, room.awayScore);
         return;
       }
-      await sleep(25000);
+      await this.nap(25000);
     }
   }
 

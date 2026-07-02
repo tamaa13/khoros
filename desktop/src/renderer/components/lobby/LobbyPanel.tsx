@@ -6,6 +6,24 @@ import { MatchRoom, type CrewMsg, type FeedRow, type Score } from "./MatchRoom";
 
 let rid = 0;
 
+// Per-room watch log: what you've seen survives leaving the room (and app
+// restarts), so re-entering restores the chat/feed instead of wiping it.
+interface RoomLog {
+  feed: FeedRow[];
+  crew: CrewMsg[];
+  score: Score | null;
+  next: number; // next unwatched event index — resume point
+  finished: boolean;
+}
+const LOG_KEY = "khoros.roomlog.v1";
+function loadLogs(): Record<string, RoomLog> {
+  try {
+    return JSON.parse(localStorage.getItem(LOG_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
 export function LobbyPanel({ active }: { active: boolean }) {
   const [rooms, setRooms] = useState<RoomChoice[] | null>(null);
   const [view, setView] = useState<"picker" | "room">("picker");
@@ -16,9 +34,13 @@ export function LobbyPanel({ active }: { active: boolean }) {
   const [peers, setPeers] = useState<string[]>([]);
   const [lounge, setLounge] = useState<CrewMsg[]>([]);
   const [goal, setGoal] = useState(false);
+  const [banner, setBanner] = useState<"resume" | "rewatch" | null>(null);
   const totalRef = useRef(0);
   const goalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loungeRef = useRef<HTMLDivElement>(null);
+  const logsRef = useRef<Record<string, RoomLog>>(loadLogs());
+  const roomRef = useRef<string | null>(null);
+  const nextRef = useRef(0);
 
   useEffect(() => {
     loungeRef.current?.scrollTo({ top: loungeRef.current.scrollHeight, behavior: "smooth" });
@@ -56,10 +78,16 @@ export function LobbyPanel({ active }: { active: boolean }) {
         totalRef.current = total;
         setScore({ home: m.home ?? "", away: m.away ?? "", homeFlag: m.homeFlag ?? "🏳️", awayFlag: m.awayFlag ?? "🏳️", hs: m.homeScore ?? 0, as: m.awayScore ?? 0, minute: m.minute ?? "", live: !!m.live, phase: m.phase ?? (m.live ? "in" : "post") });
       } else if (m.kind === "feed") {
+        if (typeof m.idx === "number") nextRef.current = m.idx + 1;
         setFeed((f) => [...f, { id: ++rid, clock: m.clock, emoji: m.emoji, text: m.text ?? "", key: m.key }]);
       } else if (m.kind === "agent") {
         setCrew((c) => [...c, { id: ++rid, from: m.from ?? "agent", emoji: m.emoji, text: m.text ?? "", told: m.callback }]);
       } else if (m.kind === "system") {
+        if ((m.text ?? "").includes("FULL TIME") && roomRef.current) {
+          const log = logsRef.current[roomRef.current];
+          if (log) log.finished = true;
+          else logsRef.current[roomRef.current] = { feed: [], crew: [], score: null, next: nextRef.current, finished: true };
+        }
         setFeed((f) => [...f, { id: ++rid, text: m.text ?? "", system: true }]);
       }
     });
@@ -80,22 +108,79 @@ export function LobbyPanel({ active }: { active: boolean }) {
     if (active && rooms === null) void loadRooms();
   }, [active, rooms, loadRooms]);
 
-  const enterRoom = useCallback(async (id: string) => {
-    setView("room");
-    setScore(null);
+  // Everything watched in the current room is logged (and saved) as it happens,
+  // so leaving never loses the room's history.
+  useEffect(() => {
+    const id = roomRef.current;
+    if (view !== "room" || !id || (feed.length === 0 && crew.length === 0)) return;
+    logsRef.current[id] = {
+      feed: feed.slice(-250),
+      crew: crew.slice(-120),
+      score,
+      next: nextRef.current,
+      finished: logsRef.current[id]?.finished ?? false,
+    };
+    try {
+      localStorage.setItem(LOG_KEY, JSON.stringify(logsRef.current));
+    } catch {
+      /* storage full — history just won't survive restarts */
+    }
+  }, [feed, crew, score, view]);
+
+  // startLobby can bounce off a still-unwinding previous room (an agent line
+  // mid-generation keeps the engine busy for a few seconds) — retry briefly.
+  const startWithRetry = useCallback(async (id: string, from: number) => {
+    for (let i = 0; i < 20; i++) {
+      const r = await khoros.startLobby(id, from).catch(() => null);
+      if (!r || r.ok || !/already running/i.test(r.error ?? "")) return;
+      await new Promise((res) => setTimeout(res, 500));
+    }
+  }, []);
+
+  const enterRoom = useCallback(
+    async (room: RoomChoice) => {
+      const log = logsRef.current[room.id];
+      roomRef.current = room.id;
+      nextRef.current = log?.next ?? 0;
+      totalRef.current = log?.score ? (log.score.hs ?? 0) + (log.score.as ?? 0) : 0;
+      setFeed(log?.feed ?? []);
+      setCrew(log?.crew ?? []);
+      setScore(log?.score ?? null);
+      setView("room");
+      if (log?.finished) return setBanner("rewatch"); // just hang out — rewatch is optional
+      if (log && log.next > 0 && !room.live) return setBanner("resume"); // paused mid-replay
+      setBanner(null);
+      await startWithRetry(room.id, room.live ? (log?.next ?? 0) : 0); // live reattaches + catches up
+    },
+    [startWithRetry],
+  );
+
+  const resumeRoom = useCallback(() => {
+    setBanner(null);
+    if (roomRef.current) void startWithRetry(roomRef.current, nextRef.current);
+  }, [startWithRetry]);
+
+  const restartRoom = useCallback(() => {
+    const id = roomRef.current;
+    if (!id) return;
+    setBanner(null);
+    delete logsRef.current[id];
+    nextRef.current = 0;
+    totalRef.current = 0;
     setFeed([]);
     setCrew([]);
-    totalRef.current = 0;
-    await khoros.startLobby(id);
-  }, []);
+    setScore(null);
+    void startWithRetry(id, 0);
+  }, [startWithRetry]);
 
   const back = useCallback(async () => {
     await khoros.stopLobby().catch(() => {});
+    setBanner(null);
     setView("picker");
     void loadRooms();
   }, [loadRooms]);
 
-  if (view === "room") return <MatchRoom score={score} feed={feed} crew={crew} watching={watching} goal={goal} onBack={back} />;
+  if (view === "room") return <MatchRoom score={score} feed={feed} crew={crew} watching={watching} goal={goal} onBack={back} banner={banner} onResume={resumeRoom} onRestart={restartRoom} />;
 
   return (
     <div className="kh-scroll h-full overflow-y-auto px-4 py-[14px]">
@@ -150,7 +235,7 @@ export function LobbyPanel({ active }: { active: boolean }) {
       ) : (
         <div className="flex flex-col gap-[12px]">
           {rooms.map((r) => (
-            <RoomCard key={r.id} room={r} onClick={() => enterRoom(r.id)} />
+            <RoomCard key={r.id} room={r} onClick={() => enterRoom(r)} />
           ))}
         </div>
       )}

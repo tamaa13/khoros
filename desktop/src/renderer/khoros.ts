@@ -57,6 +57,7 @@ export interface LobbyMessage {
   live?: boolean;
   phase?: "pre" | "in" | "post";
   // feed
+  idx?: number;
   clock?: string;
   emoji?: string;
   key?: boolean;
@@ -112,7 +113,7 @@ export interface KhorosAPI {
   recall(q: string): Promise<Array<{ kind: string; text: string; score: number }>>;
   schedule(when: string): Promise<unknown>;
   lobbyRooms(): Promise<RoomsResult>;
-  startLobby(roomId?: string): Promise<OkResult>;
+  startLobby(roomId?: string, fromIndex?: number): Promise<OkResult>;
   stopLobby(): Promise<OkResult>;
   onLobbyStatus(cb: (s: string) => void): void;
   onLobbyMessage(cb: (m: LobbyMessage) => void): void;

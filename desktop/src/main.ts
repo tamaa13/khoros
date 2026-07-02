@@ -503,10 +503,10 @@ app.whenReady().then(async () => {
       return { ok: false, error: String(e?.message ?? e) };
     }
   });
-  ipcMain.handle("lobby:start", async (_e, roomId?: string) => {
+  ipcMain.handle("lobby:start", async (_e, roomId?: string, fromIndex?: number) => {
     if (lobbyBusy) return { ok: false, error: "match room already running" };
     lobbyBusy = true;
-    const lobby = new Lobby(join(app.getPath("userData"), "lobby"), agent, settings.agentName ?? "You");
+    const lobby = new Lobby(join(app.getPath("userData"), "lobby"), agent, settings.agentName ?? "You", Math.max(0, fromIndex ?? 0));
     runningLobby = lobby;
     try {
       await lobby.init((s: string) => send("lobby:status", s), roomId);
