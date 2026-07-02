@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+/* ── Khoros tokens — stadium night ─────────────────────────────────────────
+   Charcoal tinted toward the gold hue, one accent that has to be earned.
+   Mirrors the desktop app's palette (desktop/tailwind.config.js). */
+@theme {
+  --color-night: #08090c; /* page bg */
+  --color-night-2: #0e0f13; /* raised surface */
+  --color-night-3: #15161b; /* card */
+  --color-line: rgba(241, 242, 245, 0.09);
+  --color-line-strong: rgba(241, 242, 245, 0.18);
+  --color-fog: #f1f2f5; /* text */
+  --color-fog-2: #a2a6af; /* secondary */
+  --color-fog-3: #7c808c; /* muted (AA on night) */
+  --color-gold: #f4c44c;
+  --color-gold-deep: #c49a33;
+  --color-gold-ink: #1a1404; /* text on gold */
+  --color-live: #d14150;
+
+  --font-display: var(--font-archivo), "Archivo", sans-serif;
+  --font-condensed: var(--font-anton), "Anton", sans-serif;
+  --font-body: var(--font-inter), "Inter", sans-serif;
+
+  --container-wrap: 1120px;
+  --container-narrow: 760px;
+
+  --shadow-card: 0 24px 60px -32px rgba(0, 0, 0, 0.85);
+  --shadow-pill: 0 10px 24px -12px rgba(244, 196, 76, 0.45);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-night);
+  color: var(--color-fog);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(244, 196, 76, 0.3);
+  color: #fff;
+}
+
+/* Display face: Archivo pushed wide + heavy, the app's title voice. */
+.display {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-variation-settings: "wdth" 118;
+  letter-spacing: -0.02em;
+}
+
+/* Kickers: condensed uppercase, tracked out. */
+.kicker {
+  font-family: var(--font-condensed);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 12px;
+  color: var(--color-fog-3);
+}
+
+/* The floodlit stadium wash behind the hero. */
+.floodlight {
+  background:
+    radial-gradient(120% 80% at 50% -20%, rgba(244, 196, 76, 0.13), transparent 55%),
+    radial-gradient(90% 60% at 90% 110%, rgba(61, 169, 104, 0.07), transparent 60%),
+    radial-gradient(70% 50% at 5% 15%, rgba(110, 147, 204, 0.06), transparent 55%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
