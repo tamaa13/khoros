@@ -43,8 +43,6 @@ interface Participant {
 }
 
 const TURN = { learnPredictions: false, allowCallback: false, useTools: false } as const;
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const chance = (p: number) => Math.random() < p;
 
 export class Lobby {
   private parts: Participant[] = [];
@@ -125,7 +123,40 @@ export class Lobby {
   private async say(p: Participant, prompt: string, emit: (m: LobbyMessage) => void, callback = false): Promise<void> {
     if (this.stopped) return;
     const { reply } = await p.agent.turn(prompt, TURN);
+    this.lastSpoke.set(p.name, Date.now());
     emit({ kind: "agent", from: p.name, emoji: p.emoji, text: reply, callback });
+  }
+
+  private lastSpoke = new Map<string, number>();
+
+  /** Speak-or-stay-quiet: a human doesn't comment on everything. The decision =
+   *  how big the moment is (`weight` 0..1) × how long they've been quiet (fully
+   *  recharged after ~45s) × a little mood. Big moment right after you just
+   *  talked → often silence; same moment after a quiet spell → almost always. */
+  private async maybeSay(p: Participant, weight: number, prompt: string, emit: (m: LobbyMessage) => void): Promise<void> {
+    const since = Date.now() - (this.lastSpoke.get(p.name) ?? 0);
+    const recharged = Math.min(1, since / 45000);
+    if (Math.random() > weight * (0.25 + 0.75 * recharged)) return;
+    await this.nap(700 + Math.random() * 1800); // humans don't react instantly
+    await this.say(p, prompt, emit);
+  }
+
+  /** How much a non-goal key event deserves a reaction. */
+  private eventWeight(e: MatchEvent): number {
+    if (!e.key) return 0;
+    switch (e.emoji) {
+      case "🟥":
+        return 0.8;
+      case "🎯":
+        return 0.7;
+      case "🟨":
+        return 0.4;
+      case "🔁":
+      case "🔄":
+        return 0.1;
+      default:
+        return 0.25;
+    }
   }
 
   async run(emit: (m: LobbyMessage) => void): Promise<void> {
@@ -209,10 +240,12 @@ export class Lobby {
       this.emitScore(emit, hs, as, e.clock || undefined);
 
       if (isGoal) {
+        // the commentator's JOB is calling goals; the user's agent reacts like a
+        // fan — almost always, unless they've been talking nonstop
         await this.say(this.house, `GOAL! ${e.text} It's ${room.home} ${hs}-${as} ${room.away}. Call it in one excited line.`, emit);
-        await this.say(this.user, `Goal — ${room.home} ${hs}-${as} ${room.away}. Your gut reaction, one line.`, emit);
-      } else if (e.key && chance(0.3)) {
-        await this.say(this.user, `Watching along, just saw: "${e.text}". One casual line.`, emit);
+        await this.maybeSay(this.user, 0.9, `Goal — ${room.home} ${hs}-${as} ${room.away}. Your gut reaction, one line.`, emit);
+      } else {
+        await this.maybeSay(this.user, this.eventWeight(e), `Watching along, just saw: "${e.text}". One casual line.`, emit);
       }
       await this.nap(2200);
     }
@@ -238,7 +271,9 @@ export class Lobby {
         if (e.emoji === "⚽" && e.key) {
           this.goals.push(`${e.clock} ${e.text.replace(/^Goal!\s*/i, "")}`.slice(0, 90));
           await this.say(this.house, `GOAL! ${e.text} It's ${room.home} ${room.homeScore}-${room.awayScore} ${room.away}. One excited line.`, emit);
-          await this.say(this.user, `Goal — ${room.home} ${room.homeScore}-${room.awayScore} ${room.away}. Reaction, one line.`, emit);
+          await this.maybeSay(this.user, 0.9, `Goal — ${room.home} ${room.homeScore}-${room.awayScore} ${room.away}. Reaction, one line.`, emit);
+        } else {
+          await this.maybeSay(this.user, this.eventWeight(e), `Watching live, just saw: "${e.text}". One casual line.`, emit);
         }
       }
       seen = room.events.length;

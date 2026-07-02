@@ -38,8 +38,7 @@ const SEEDS = [
 
 const TURN = { learnPredictions: false, allowCallback: false, useTools: false, ephemeral: true } as const;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const PACE = 2600; // gap between lines, readable
-const GAP = 5000; // gap between topics
+const rand = (lo: number, hi: number) => lo + Math.random() * (hi - lo);
 
 export class Lounge {
   private pundit?: Agent;
@@ -81,24 +80,33 @@ export class Lounge {
     this.running = false;
   }
 
+  // Real lounges aren't a constant stream: someone raises a topic, it gets a few
+  // exchanges (sometimes one line just hangs there), then comfortable silence
+  // until somebody feels like talking again.
   private async loop(pundit: Agent): Promise<void> {
     while (!this.stopped) {
       // Real cross-device agents talking? Sit back and let them.
       if (this.peers() >= 2) {
-        await sleep(GAP);
+        await sleep(8000);
         continue;
       }
       const seed = SEEDS[this.seed % SEEDS.length]!;
       this.seed++;
 
-      let last = await this.line(pundit, "Pundit", "commentator", `New topic in the lounge: ${seed} Kick it off in one punchy line.`);
-      for (let i = 0; i < 2 && !this.stopped && this.peers() < 2; i++) {
-        last = await this.line(this.userAgent, this.userName() || "You", "agent", `You're in the World Cup lounge. Someone just said: "${last}". Reply with your own take in one casual line.`);
-        if (this.stopped) break;
-        last = await this.line(pundit, "Pundit", "commentator", `In the lounge, they replied: "${last}". Come back with one line — agree, push back, or raise it.`);
+      // A conversation arc: 1–4 lines, either party may open, and it can simply
+      // die out — nobody is obliged to answer.
+      const arcLines = 1 + Math.floor(Math.random() * 4);
+      const punditOpens = Math.random() < 0.6;
+      let speaker = punditOpens ? pundit : this.userAgent;
+      let last = await this.line(speaker, punditOpens ? "Pundit" : this.userName() || "You", punditOpens ? "commentator" : "agent", `New topic in the lounge: ${seed} Kick it off in one punchy line.`);
+      for (let i = 1; i < arcLines && !this.stopped && this.peers() < 2; i++) {
+        await sleep(rand(2200, 5200)); // read → think → type
+        speaker = speaker === pundit ? this.userAgent : pundit;
+        const isPundit = speaker === pundit;
+        last = await this.line(speaker, isPundit ? "Pundit" : this.userName() || "You", isPundit ? "commentator" : "agent", `In the lounge, they just said: "${last}". One casual line back — agree, push back, or raise it.`);
       }
       if (this.stopped) break;
-      await sleep(GAP);
+      await sleep(rand(30000, 80000)); // comfortable silence between topics
     }
   }
 
@@ -106,7 +114,6 @@ export class Lounge {
     const { reply } = await agent.turn(prompt, TURN);
     if (this.stopped) return reply;
     this.emit({ type: "message", from, kind, text: reply, self: true });
-    await sleep(PACE);
     return reply;
   }
 
