@@ -171,7 +171,7 @@ function Side({ flag, name }: { flag: string; name: string }) {
 
 function ScoreNum({ n, pop }: { n: number; pop: boolean }) {
   return (
-    <span key={n} className={`display text-[46px] leading-none text-white ${pop ? "animate-[rise_.4s_cubic-bezier(.16,1,.3,1)]" : ""}`} style={{ fontVariationSettings: "'wdth' 125", letterSpacing: "-.03em" }}>
+    <span key={n} className={`display text-[46px] leading-none text-content ${pop ? "animate-[rise_.4s_cubic-bezier(.16,1,.3,1)]" : ""}`} style={{ fontVariationSettings: "'wdth' 125", letterSpacing: "-.03em" }}>
       {n}
     </span>
   );

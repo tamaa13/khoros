@@ -46,7 +46,8 @@
   --line3: 60 64 74;
   --text: 241 242 245;
   --textmuted: 162 166 175;
-  --textfaint: 108 112 122;
+  /* faint still passes WCAG AA (≥4.5:1) on bg/surface-0 */
+  --textfaint: 124 128 140;
   --gold: 244 196 76;
   --goldbright: 239 204 124;
   --golddeep: 196 154 51;
@@ -93,7 +94,8 @@
   --line3: 200 195 181;
   --text: 26 28 32;
   --textmuted: 90 94 102;
-  --textfaint: 138 142 150;
+  /* faint still passes WCAG AA (≥4.5:1) on the cream bg */
+  --textfaint: 99 102 109;
   --gold: 201 154 46;
   --goldbright: 216 173 69;
   --golddeep: 168 126 31;
@@ -114,6 +116,21 @@
   ::selection {
     background: rgba(244, 196, 76, 0.32);
     color: #fff;
+  }
+  /* WCAG AA: keyboard focus must be visible on every interactive element */
+  :focus-visible {
+    outline: 2px solid rgb(var(--gold));
+    outline-offset: 2px;
+  }
+  /* Celebratory/decorative motion steps aside for reduced-motion users */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 

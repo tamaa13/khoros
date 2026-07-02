@@ -41,8 +41,8 @@ export function SettingsMenu({ voice, onVoiceChange, language, onLanguageChange,
       <div className="absolute right-4 top-[50px] z-50 w-[262px] overflow-hidden rounded-[14px] border border-border bg-surface-1 shadow-pop animate-rise">
         <div className="flex items-center justify-between border-b border-[rgb(var(--c1f2128))] px-[14px] py-[10px]">
           <span className="text-[11px] font-bold uppercase tracking-[.1em] text-content-faint">Settings</span>
-          <button onClick={onClose} aria-label="Close">
-            <X className="h-[14px] w-[14px] text-content-faint hover:text-content" />
+          <button onClick={onClose} className="-mr-[7px] flex h-[28px] w-[28px] items-center justify-center rounded-md text-content-faint hover:text-content" aria-label="Close">
+            <X className="h-[14px] w-[14px]" />
           </button>
         </div>
 
