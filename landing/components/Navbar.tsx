@@ -1,3 +1,4 @@
+import { DownloadButton } from "./DownloadButton";
 import { Mark } from "./Mark";
 
 const REPO = "https://github.com/tamaa13/khoros";
@@ -16,14 +17,7 @@ export function Navbar() {
           <a href="/docs" className="hidden text-[13.5px] text-fog-2 transition-colors hover:text-fog sm:block">
             Docs
           </a>
-          <a
-            href={REPO}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-full bg-gold px-[18px] py-[9px] text-[13px] font-bold text-gold-ink transition-transform hover:-translate-y-0.5"
-          >
-            Get Khoros
-          </a>
+          <DownloadButton nav />
         </div>
       </nav>
     </header>
