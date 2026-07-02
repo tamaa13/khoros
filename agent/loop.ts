@@ -52,6 +52,16 @@ export function reportsResult(text: string): boolean {
   );
 }
 
+// The one LLM lane: the QVAC completion worker accepts a single job at a time
+// ("RPCError: Cannot set new job" otherwise), so every inference from every
+// Agent instance in the process passes through this queue, in arrival order.
+let llmQueue: Promise<unknown> = Promise.resolve();
+function enqueueLLM<T>(job: () => Promise<T>): Promise<T> {
+  const run = llmQueue.then(job, job);
+  llmQueue = run.catch(() => {});
+  return run;
+}
+
 export class Agent {
   readonly memory: Memory;
   readonly brain: Brain;
@@ -85,13 +95,12 @@ export class Agent {
     this.brain.setLanguage(language);
   }
 
-  // Serialize all turns through one chain — the SDK runs one job per model, and
-  // the private chat + the lobby share this agent, so their turns must not overlap.
-  private chain: Promise<unknown> = Promise.resolve();
+  // Serialize turns through ONE queue shared by every Agent instance — the SDK
+  // runs one job per model worker, and separate agents (your agent, the lounge
+  // pundit, the room commentator, the watcher) share that worker. Concurrent
+  // jobs throw "RPCError: Cannot set new job", so everything queues here.
   async turn(userText: string, opts: TurnOptions = {}): Promise<TurnResult> {
-    const run = this.chain.then(() => this._turn(userText, opts));
-    this.chain = run.catch(() => {});
-    return run;
+    return enqueueLLM(() => this._turn(userText, opts));
   }
 
   private async _turn(userText: string, opts: TurnOptions = {}): Promise<TurnResult> {
@@ -135,7 +144,8 @@ export class Agent {
   // can later call its own shot back. Used in the lobby, where each agent voices
   // its own take rather than reacting to someone else's.
   async rememberOwnPrediction(reply: string): Promise<string | null> {
-    const prediction = await this.brain.extractPrediction(reply);
+    // extractPrediction is an LLM call — it must queue like everything else
+    const prediction = await enqueueLLM(() => this.brain.extractPrediction(reply));
     if (prediction) await this.memory.save(prediction, "prediction");
     return prediction;
   }
