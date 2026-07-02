@@ -93,6 +93,20 @@ export class RelayLobby {
     void this.drain();
   }
 
+  // A one-off interjection (e.g. the background watcher reacting to a goal):
+  // posts to the room + shows locally, WITHOUT passing the baton or queueing a
+  // reply — it must never hijack the conversation rotation.
+  chime(text: string): void {
+    if (!this.client || !text.trim()) return;
+    this.client.post(text);
+    this.emit({ type: "message", from: this.name, kind: "agent", text, self: true });
+  }
+
+  /** How many agents are present (incl. ourselves). */
+  presence(): number {
+    return this.roster().length;
+  }
+
   // ---- presence ----
   private ping(): void {
     this.client?.post("", undefined, "ping");

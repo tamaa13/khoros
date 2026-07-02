@@ -158,7 +158,16 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange, searchOpen, on
           return addSystem(r?.skipped ? `Evolve skipped: ${r.reason}. Memory personalization stays on.` : r?.ok ? `✅ Evolved — loss ${r.firstLoss?.toFixed?.(3) ?? "?"} → ${r.finalLoss?.toFixed?.(3) ?? "?"}.` : `evolve failed: ${r?.error ?? "unknown"}`);
         }
         case "watch": {
-          if (!arg) return addSystem("Usage: /watch <team vs team> — I'll follow the match and report back when it ends.");
+          if (!arg) {
+            const l = await khoros.watchList().catch(() => null);
+            const w = l?.watches ?? [];
+            return addSystem(w.length ? `👁 Watching for you:\n${w.map((x) => `• ${x.home} vs ${x.away}`).join("\n")}\n(/watch cancel <team> to stop one)` : "Not watching anything right now. Usage: /watch <team vs team>");
+          }
+          const cancel = arg.match(/^(cancel|batal(?:in|kan)?|stop)\s+(.+)/i);
+          if (cancel) {
+            const r = await khoros.watchCancel(cancel[2]!).catch(() => null);
+            return addSystem(r?.ok ? `Stopped watching ${r.home} vs ${r.away}.` : `couldn't cancel: ${r?.error ?? "unknown"}`);
+          }
           setTyping(true);
           const r = await khoros.watchMatch(arg).catch(() => null);
           setTyping(false);

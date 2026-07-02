@@ -93,6 +93,8 @@ export interface KhorosAPI {
   onNotify(cb: (p: { text: string }) => void): void;
   watchMatch(q: string): Promise<OkResult & { kind?: "armed" | "recap"; reply?: string }>;
   recapMatch(q: string): Promise<OkResult & { kind?: "recap" | "pending"; reply?: string }>;
+  watchList(): Promise<OkResult & { watches?: { id: string; home: string; away: string }[] }>;
+  watchCancel(q: string): Promise<OkResult & { home?: string; away?: string }>;
   onStatus(cb: (s: string) => void): void;
   onProgress(cb: (p: unknown) => void): void;
   onReady(cb: (ctx: ReadyCtx) => void): void;
