@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { EASE } from "@/lib/motion";
 
 const SOFT = [0.16, 1, 0.3, 1] as const; // expressive ease-out for the zoom + settle
@@ -10,20 +10,25 @@ const HOLD_MS = 2350; // zoom + sweep, then let the page in
 // First-load intro (arca's overlay, minus the consent step — Khoros has no
 // cookies to ask about): KHOROS zooms in from full-screen, the progress line
 // sweeps, then the whole thing lifts. Once per browser session.
+//
+// It starts VISIBLE so the overlay is in the very first paint (starting hidden
+// let the landing flash before the intro popped over it). A layout effect hides
+// it synchronously, before paint, on repeat views.
 export function IntroOverlay() {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(true);
+
+  useLayoutEffect(() => {
+    if (window.sessionStorage.getItem("khoros-intro") === "1") setVisible(false);
+  }, []);
 
   useEffect(() => {
-    const onLanding = window.location.pathname === "/" || window.location.pathname === "/index.html";
-    const seen = window.sessionStorage.getItem("khoros-intro") === "1";
-    if (!onLanding || seen) return;
-    setVisible(true);
+    if (!visible) return;
     const t = setTimeout(() => {
       window.sessionStorage.setItem("khoros-intro", "1");
       setVisible(false);
     }, HOLD_MS);
     return () => clearTimeout(t);
-  }, []);
+  }, [visible]);
 
   // Lock the page while the intro is up (the landing renders behind this fixed
   // overlay — without this, Lenis would scroll the hidden page).
