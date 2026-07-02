@@ -3,14 +3,32 @@ name: Build desktop installers
 # Build the Khoros desktop app on macOS, Windows, and Linux at once.
 # QVAC's native addons are per-OS and can't cross-compile, so each installer must
 # be built on its own OS — that's exactly what this matrix does.
+#
+# Release stays fresh AUTOMATICALLY: any push to main that touches app code
+# (and any manual dispatch) rebuilds all three installers and replaces the
+# assets on the rolling release, so the landing's download buttons always
+# serve the newest build. Tag pushes still create their own new Release.
 on:
   workflow_dispatch: # manual "Run workflow" button in the Actions tab
+    inputs:
+      release_tag:
+        description: "Existing release to refresh with these builds"
+        default: "v0.1.0"
+        required: true
   push:
+    branches:
+      - main
     tags:
-      - "v*" # pushing a tag like v0.1.0 also builds + attaches to a Release
+      - "v*" # a new tag (v0.2.0…) builds + attaches to its own new Release
+    paths: # branch pushes: only app code (paths are ignored for tag pushes)
+      - "desktop/**"
+      - "agent/**"
+      - "tools/**"
+      - "net/**"
+      - ".github/workflows/build-desktop.yml"
 
 permissions:
-  contents: write # needed to publish a Release on tag pushes
+  contents: write # publish Releases + replace release assets
 
 jobs:
   build:
@@ -57,7 +75,22 @@ jobs:
             desktop/out/make/**/*.zip
           if-no-files-found: warn
 
-      # On a tag push (v*), also attach the installers to a GitHub Release
+      # Keep the rolling release fresh: main pushes + manual dispatches replace
+      # the assets in place, so the landing's download links always serve the
+      # newest build. --clobber overwrites same-named assets.
+      - name: Refresh rolling release assets
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/'))
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag || 'v0.1.0' }}
+        run: |
+          shopt -s globstar nullglob
+          files=(out/make/**/*.dmg out/make/**/*.exe out/make/**/*.deb out/make/**/*.zip)
+          echo "uploading ${#files[@]} asset(s) to $TAG: ${files[*]}"
+          gh release upload "$TAG" "${files[@]}" --clobber -R "$GITHUB_REPOSITORY"
+
+      # On a tag push (v*), attach the installers to that tag's own Release
       - name: Publish to Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
