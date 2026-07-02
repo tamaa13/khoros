@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld("khoros", {
   // on-device speech-to-text (QVAC Whisper)
   transcribe: (base64Wav) => ipcRenderer.invoke("transcribe", base64Wav),
   sttSelfTest: () => ipcRenderer.invoke("stt:selftest"),
+  // on-device OCR (QVAC) — share a photo, the agent reads the text in it
+  ocrPick: () => ipcRenderer.invoke("ocr:pick"),
+  ocrRead: (path) => ipcRenderer.invoke("ocr:read", path),
   // on-device LoRA fine-tune (QVAC) — the "evolve" layer
   finetuneSelfTest: () => ipcRenderer.invoke("finetune:selftest"),
   finetuneApplyTest: (prompt) => ipcRenderer.invoke("finetune:applytest", prompt),

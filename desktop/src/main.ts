@@ -3,7 +3,7 @@
  * the CLI uses) in Node and bridges it to a chat window over IPC. Nothing leaves
  * the machine: the LLM, memory embeddings, and tools all run locally.
  */
-import { app, BrowserWindow, ipcMain, nativeImage, powerMonitor } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, powerMonitor } from "electron";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -286,6 +286,73 @@ app.whenReady().then(async () => {
       return { ok: false, error: String(e?.message ?? e) };
     }
   });
+
+  // ---- on-device OCR (QVAC easyocr pipeline): read text out of a photo ----
+  let reader: any = null;
+  let readerLoading: Promise<boolean> | null = null;
+  async function ensureReader(): Promise<boolean> {
+    if (reader) return true;
+    if (readerLoading) return readerLoading; // in-flight guard (avoid double-load)
+    readerLoading = (async () => {
+      try {
+        send("status", "loading the on-device reader…");
+        const { Reader } = await import("../../agent/ocr");
+        const r = new Reader();
+        await r.init();
+        reader = r;
+        return true;
+      } catch (e: any) {
+        console.error("[ocr] load failed:", e?.message ?? e);
+        return false;
+      } finally {
+        readerLoading = null;
+      }
+    })();
+    return readerLoading;
+  }
+  async function ocrRead(path: string): Promise<{ ok: boolean; text?: string; error?: string }> {
+    if (!(await ensureReader())) return { ok: false, error: "ocr model failed to load" };
+    const text = await reader.readText(path);
+    console.error("[ocr] read:", JSON.stringify(text).slice(0, 160));
+    return { ok: true, text };
+  }
+  // Pick a photo (file dialog), OCR it, and return both the image (for the chat
+  // bubble) and the extracted text (for the agent).
+  ipcMain.handle("ocr:pick", async () => {
+    try {
+      const { canceled, filePaths } = await dialog.showOpenDialog(win!, {
+        title: "Share a photo with your agent",
+        properties: ["openFile"],
+        filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "bmp", "webp", "gif", "tiff"] }],
+      });
+      if (canceled || !filePaths[0]) return { ok: false, canceled: true };
+      const path = filePaths[0];
+      // downscale for the chat bubble (keep IPC payloads small)
+      const img = nativeImage.createFromPath(path);
+      const w = img.getSize().width;
+      const preview = (w > 640 ? img.resize({ width: 640 }) : img).toJPEG(80).toString("base64");
+      const r = await ocrRead(path);
+      return { ...r, image: preview, name: path.split("/").pop() };
+    } catch (e: any) {
+      console.error("[ocr] error:", e?.message ?? e);
+      return { ok: false, error: String(e?.message ?? e) };
+    }
+  });
+  // Power-user/self-test path: OCR an explicit file path (backs /read <path>).
+  ipcMain.handle("ocr:read", async (_e, path: string) => {
+    try {
+      return await ocrRead(path);
+    } catch (e: any) {
+      return { ok: false, error: String(e?.message ?? e) };
+    }
+  });
+  // Dev self-test: KHOROS_OCR_TEST=<image path> runs OCR at startup in the real
+  // Electron runtime and logs the result (the file-dialog path can't be automated).
+  if (process.env.KHOROS_OCR_TEST) {
+    ocrRead(process.env.KHOROS_OCR_TEST)
+      .then((r) => console.error("[ocr:selftest]", JSON.stringify(r).slice(0, 400)))
+      .catch((e: any) => console.error("[ocr:selftest] failed:", e?.message ?? e));
+  }
   // On-device LoRA fine-tune self-test: train a tiny "Brazil superfan" adapter
   // and report whether the loss drops + how long it takes (for the tier gate).
   const FT_EXAMPLES = [

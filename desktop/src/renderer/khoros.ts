@@ -100,6 +100,8 @@ export interface KhorosAPI {
   onImagineProgress(cb: (p: ImagineProgress) => void): void;
   transcribe(base64Wav: string): Promise<TranscribeResult>;
   sttSelfTest(): Promise<OkResult & { text?: string }>;
+  ocrPick(): Promise<OkResult & { canceled?: boolean; text?: string; image?: string; name?: string }>;
+  ocrRead(path: string): Promise<OkResult & { text?: string }>;
   finetuneSelfTest(): Promise<OkResult>;
   finetuneApplyTest(prompt?: string): Promise<OkResult>;
   onFinetuneProgress(cb: (p: unknown) => void): void;

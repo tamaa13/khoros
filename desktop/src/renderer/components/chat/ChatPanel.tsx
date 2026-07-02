@@ -84,7 +84,7 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange }: { name: stri
       switch (cmd) {
         case "help":
           return addSystem(
-            ["/imagine <prompt> — generate an image", "/voice on|off — spoken replies", "/translate <text> — on-device translation", "/listen — voice input (/listen test = self-test)", "/evolve [now|status|apply] — fine-tune on your style", "/memories · /recall <q> — memory", "/schedule [recent] — fixtures/results", "/name <name> · /language <lang>", "/lobby · /clear"].join("\n"),
+            ["/imagine <prompt> — generate an image", "/voice on|off — spoken replies", "/translate <text> — on-device translation", "/listen — voice input (/listen test = self-test)", "/read <path> — read text from a photo (or use 📎)", "/evolve [now|status|apply] — fine-tune on your style", "/memories · /recall <q> — memory", "/schedule [recent] — fixtures/results", "/name <name> · /language <lang>", "/lobby · /clear"].join("\n"),
           );
         case "clear":
           return setMsgs([]);
@@ -137,6 +137,11 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange }: { name: stri
           const r = (await khoros.finetuneSelfTest()) as Record<string, any>;
           return addSystem(r?.skipped ? `Evolve skipped: ${r.reason}. Memory personalization stays on.` : r?.ok ? `✅ Evolved — loss ${r.firstLoss?.toFixed?.(3) ?? "?"} → ${r.finalLoss?.toFixed?.(3) ?? "?"}.` : `evolve failed: ${r?.error ?? "unknown"}`);
         }
+        case "read": {
+          if (!arg) return addSystem("Usage: /read <path-to-image> — I'll read the text in it (on-device OCR).");
+          const r = await khoros.ocrRead(arg.replace(/^~/, ""));
+          return addSystem(r?.ok ? (r.text?.trim() ? `📖 I read:\n${r.text}` : "No readable text found.") : `read failed: ${r?.error ?? "unknown"}`);
+        }
         case "listen":
           if (/^test$/i.test(arg)) {
             const r = (await khoros.sttSelfTest()) as Record<string, any>;
@@ -172,6 +177,29 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange }: { name: stri
     },
     [mic, onRename, push, speakReply, onVoiceChange],
   );
+
+  // Share a photo: the agent reads the text in it (on-device OCR) and reacts —
+  // match schedules, scoreboards, tickets, screenshots.
+  const attachPhoto = useCallback(async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const r = await khoros.ocrPick();
+      if (r?.canceled) return;
+      if (!r?.ok) return addSystem(`couldn't read that photo: ${r?.error ?? "unknown"}`);
+      push({ role: "user", text: "", image: r.image });
+      if (!r.text?.trim()) return addSystem("I couldn't find any readable text in that photo.");
+      setTyping(true);
+      const prompt = `I'm sharing a photo (${r.name ?? "image"}). The text in it reads:\n"""\n${r.text}\n"""\nTell me what this is and react to it briefly.`;
+      const a = await khoros.ask(prompt).catch((e) => ({ reply: `(error: ${e?.message ?? e})` }) as Awaited<ReturnType<typeof khoros.ask>>);
+      setTyping(false);
+      push({ role: "agent", text: a.reply, tools: a.tools });
+      speakReply(a.reply);
+    } finally {
+      setTyping(false);
+      setBusy(false);
+    }
+  }, [busy, push, speakReply]);
 
   const submit = useCallback(async () => {
     const text = input.trim();
@@ -225,7 +253,7 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange }: { name: stri
         {search.trim() && shown.length === 0 && <div className="mt-8 text-center text-[12.5px] text-content-faint">No messages match “{search}”.</div>}
         {shown.map((m) =>
           m.role === "user" ? (
-            <UserBubble key={m.id} text={m.text} />
+            <UserBubble key={m.id} text={m.text} image={m.image} />
           ) : m.role === "system" ? (
             <SystemLine key={m.id} text={m.text} />
           ) : m.told ? (
@@ -240,7 +268,7 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange }: { name: stri
         {typing && <Typing />}
       </div>
 
-      <Composer value={input} onChange={setInput} onSubmit={submit} onPick={setInput} mic={mic.status} onMic={mic.toggle} disabled={busy && !input.startsWith("/")} name={name} />
+      <Composer value={input} onChange={setInput} onSubmit={submit} onPick={setInput} mic={mic.status} onMic={mic.toggle} onAttach={attachPhoto} disabled={busy && !input.startsWith("/")} name={name} />
 
       {lightbox && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/85 p-6" onClick={() => setLightbox(null)}>

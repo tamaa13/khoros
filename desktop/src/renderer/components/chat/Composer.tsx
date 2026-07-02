@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Brain, Calendar, CircleHelp, Dna, Ear, Globe, Languages, Loader2, Mic, Pencil, Search, Send, Sparkles, Trash2, Users, Volume2 } from "lucide-react";
+import { Brain, Calendar, CircleHelp, Dna, Ear, Globe, Languages, Loader2, Mic, Paperclip, Pencil, ScanText, Search, Send, Sparkles, Trash2, Users, Volume2 } from "lucide-react";
 import type { MicStatus } from "../../hooks/useMic";
 
 interface Cmd {
@@ -12,6 +12,7 @@ const COMMANDS: Cmd[] = [
   { name: "/voice", desc: "agent speaks replies", icon: <Volume2 /> },
   { name: "/translate", desc: "translate a message", icon: <Languages /> },
   { name: "/listen", desc: "transcribe live audio", icon: <Ear /> },
+  { name: "/read", desc: "read text from a photo (OCR)", icon: <ScanText /> },
   { name: "/evolve", desc: "fine-tune on your takes", icon: <Dna /> },
   { name: "/memories", desc: "what it remembers", icon: <Brain /> },
   { name: "/recall", desc: "search memory", icon: <Search /> },
@@ -38,6 +39,7 @@ export function Composer({
   onPick,
   mic,
   onMic,
+  onAttach,
   disabled,
   name,
 }: {
@@ -47,6 +49,7 @@ export function Composer({
   onPick: (cmd: string) => void;
   mic: MicStatus;
   onMic: () => void;
+  onAttach: () => void;
   disabled: boolean;
   name: string;
 }) {
@@ -113,6 +116,14 @@ export function Composer({
             className={`min-w-0 flex-1 bg-transparent py-2 text-[14px] outline-none placeholder:text-content-faint ${value.startsWith("/") ? "font-mono text-gold-bright" : "text-content"}`}
           />
         )}
+        <button
+          onClick={onAttach}
+          disabled={disabled}
+          className="flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[11px] border border-border-subtle bg-[rgb(var(--c181920))] text-content-muted transition-colors hover:text-content disabled:opacity-50"
+          aria-label="Share a photo"
+        >
+          <Paperclip className="h-[16px] w-[16px]" strokeWidth={1.75} />
+        </button>
         <button
           onClick={onMic}
           disabled={transcribing}
