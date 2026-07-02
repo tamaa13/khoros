@@ -55,7 +55,17 @@ export function IntroOverlay() {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6, ease: EASE }}
-          className="floodlight fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-night px-6"
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden px-6"
+          style={{
+            // self-contained wash with a SOLID night base — .floodlight alone is
+            // gradient-only (its background shorthand resets the color to
+            // transparent), which let the landing show through the intro
+            background:
+              "radial-gradient(120% 80% at 50% -20%, rgba(244,196,76,.13), transparent 55%)," +
+              "radial-gradient(90% 60% at 90% 110%, rgba(61,169,104,.07), transparent 60%)," +
+              "radial-gradient(70% 50% at 5% 15%, rgba(110,147,204,.06), transparent 55%)," +
+              "#08090C",
+          }}
         >
           <div className="relative flex w-full max-w-[460px] flex-col items-center gap-7 text-center">
             <motion.span
