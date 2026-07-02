@@ -1,3 +1,4 @@
+import { IntroOverlay } from "@/components/IntroOverlay";
 import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
 import { ValueProp } from "@/components/ValueProp";
@@ -11,6 +12,7 @@ import { ClosingCta, Footer } from "@/components/Footer";
 export default function Page() {
   return (
     <>
+      <IntroOverlay />
       <Navbar />
       <main>
         <Hero />

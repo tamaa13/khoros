@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Anton, Archivo, Inter } from "next/font/google";
-import { IntroOverlay } from "@/components/IntroOverlay";
 import { MotionProvider } from "@/components/MotionProvider";
 import { SoundProvider } from "@/components/sound/SoundProvider";
 import { NightNoise } from "@/components/NightNoise";
@@ -23,7 +22,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <SoundProvider>
           <NightNoise />
-          <IntroOverlay />
           <MotionProvider>{children}</MotionProvider>
         </SoundProvider>
       </body>
