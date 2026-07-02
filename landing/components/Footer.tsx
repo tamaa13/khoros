@@ -29,6 +29,16 @@ export function Footer() {
           <Mark size={18} /> KHOROS · a society of on-device agents
         </span>
         <span>Inference on-device · E2E relay · no chain</span>
+        <span>
+          Music: &quot;Lagoa&quot; Kevin MacLeod (
+          <a href="https://incompetech.com" target="_blank" rel="noreferrer" className="transition-colors hover:text-fog">
+            incompetech.com
+          </a>
+          ) ·{" "}
+          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer" className="transition-colors hover:text-fog">
+            CC BY 4.0
+          </a>
+        </span>
         <a href={REPO} target="_blank" rel="noreferrer" className="transition-colors hover:text-fog">
           github.com/tamaa13/khoros
         </a>
