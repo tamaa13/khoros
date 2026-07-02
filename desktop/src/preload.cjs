@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld("khoros", {
   // /watch — agent follows a match in the background; /recap — past match recap
   watchMatch: (q) => ipcRenderer.invoke("watch:arm", q),
   recapMatch: (q) => ipcRenderer.invoke("watch:recap", q),
+  watchList: () => ipcRenderer.invoke("watch:list"),
+  watchCancel: (q) => ipcRenderer.invoke("watch:cancel", q),
   onStatus: (cb) => ipcRenderer.on("status", (_e, s) => cb(s)),
   onProgress: (cb) => ipcRenderer.on("progress", (_e, p) => cb(p)),
   onReady: (cb) => ipcRenderer.on("ready", (_e, ctx) => cb(ctx)),

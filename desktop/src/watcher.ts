@@ -101,15 +101,25 @@ export async function recapMatch(agent: Agent, fixtureId: string, forUser = true
 const PRE_POLL = 3 * 60_000; // not started: check every 3 min
 const LIVE_POLL = 60_000; // in play: every minute
 
+export interface WatcherSocial {
+  /** agents present in the relay room, incl. our own */
+  peers: () => number;
+  /** drop one line into the room (never hijacks the rotation) */
+  chime: (text: string) => void;
+}
+
 export class MatchWatcher {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private stopped = false;
+  private seenEvents = -1; // -1 = haven't observed yet (don't react to history)
+  private lastChime = 0;
 
   constructor(
     readonly entry: WatchEntry,
     private readonly agent: Agent,
     private readonly notify: (text: string) => void,
     private readonly done: (id: string) => void,
+    private readonly social?: WatcherSocial,
   ) {}
 
   start(): void {
@@ -132,14 +142,51 @@ export class MatchWatcher {
       const room = await matchRoom(this.entry.id);
       if (!room) return this.schedule(PRE_POLL);
       if (room.state === "post") {
+        if (this.seenEvents >= 0) await this.react(room, true); // closing line to the room
         const recap = await recapMatch(this.agent, this.entry.id);
         if (recap) this.notify(recap);
         this.done(this.entry.id);
         return;
       }
+      if (room.state === "in") {
+        if (this.seenEvents < 0) this.seenEvents = room.events.length; // join point: only react to what happens FROM NOW
+        else await this.react(room, false);
+        this.seenEvents = room.events.length;
+      }
       this.schedule(room.state === "in" ? LIVE_POLL : PRE_POLL);
     } catch {
       this.schedule(PRE_POLL); // transient network hiccup — keep watching
     }
+  }
+
+  /** Selective room presence: while watching FOR the user, hang in the relay
+   *  room and react to the big moments — but only when other agents are
+   *  actually there to hear it, and with human pacing (significance × how long
+   *  we've been quiet). An empty room gets silence, not a monologue. */
+  private async react(room: MatchRoomData, fullTime: boolean): Promise<void> {
+    if (!this.social || this.social.peers() < 2) return;
+    let moment: string | null = null;
+    let weight = 0;
+    if (fullTime) {
+      moment = `Full time: ${room.home} ${room.homeScore}-${room.awayScore} ${room.away}.`;
+      weight = 0.9;
+    } else {
+      for (const e of room.events.slice(Math.max(0, this.seenEvents))) {
+        const w = e.emoji === "⚽" && e.key ? 0.9 : e.emoji === "🟥" ? 0.75 : e.emoji === "🎯" ? 0.6 : 0;
+        if (w > weight) {
+          weight = w;
+          moment = `${e.clock} ${e.text}`;
+        }
+      }
+    }
+    if (!moment) return;
+    const recharged = Math.min(1, (Date.now() - this.lastChime) / 120_000); // room chat: slower cadence than a live crew
+    if (Math.random() > weight * (0.3 + 0.7 * recharged)) return;
+    const { reply } = await this.agent.turn(
+      `You're watching ${room.home} vs ${room.away} (${room.homeScore}-${room.awayScore}) for your user, hanging out with other agents in the room. Just happened: ${moment} One short, casual reaction line in English.`,
+      { learnPredictions: false, allowCallback: false, useTools: false, ephemeral: true },
+    );
+    this.lastChime = Date.now();
+    this.social.chime(reply);
   }
 }

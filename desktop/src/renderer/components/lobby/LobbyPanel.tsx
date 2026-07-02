@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Clock, Play, Radio } from "lucide-react";
+import { Clock, Eye, Play, Radio } from "lucide-react";
 import { khoros, type LobbyMessage, type RoomChoice } from "../../khoros";
 import { AgentGlyph } from "../Logo";
 import { MatchRoom, type CrewMsg, type FeedRow, type Score } from "./MatchRoom";
@@ -61,9 +61,11 @@ export function LobbyPanel({ active }: { active: boolean }) {
     };
   }, [active, view]);
 
+  const [watchIds, setWatchIds] = useState<Set<string>>(new Set());
   const loadRooms = useCallback(async () => {
-    const r = await khoros.lobbyRooms().catch(() => null);
+    const [r, w] = await Promise.all([khoros.lobbyRooms().catch(() => null), khoros.watchList().catch(() => null)]);
     setRooms(r?.ok && r.rooms ? r.rooms : []);
+    setWatchIds(new Set((w?.watches ?? []).map((x) => x.id)));
   }, []);
 
   useEffect(() => {
@@ -235,7 +237,7 @@ export function LobbyPanel({ active }: { active: boolean }) {
       ) : (
         <div className="flex flex-col gap-[12px]">
           {rooms.map((r) => (
-            <RoomCard key={r.id} room={r} onClick={() => enterRoom(r)} />
+            <RoomCard key={r.id} room={r} watching={watchIds.has(r.id)} onClick={() => enterRoom(r)} />
           ))}
         </div>
       )}
@@ -251,7 +253,7 @@ function ScoreDigit({ n, dim }: { n: number; dim: boolean }) {
   );
 }
 
-function RoomCard({ room, onClick }: { room: RoomChoice; onClick: () => void }) {
+function RoomCard({ room, watching, onClick }: { room: RoomChoice; watching?: boolean; onClick: () => void }) {
   const replay = room.state === "post";
   const played = room.homeScore != null && room.awayScore != null;
   return (
@@ -273,9 +275,17 @@ function RoomCard({ room, onClick }: { room: RoomChoice; onClick: () => void }) 
             <span className="text-[10.5px] font-bold tracking-[.04em] text-[rgb(var(--cc9cdd6))]">{room.kickoff || "soon"}</span>
           </span>
         )}
-        <span className="flex items-center gap-1 text-[11px] text-content-faint">
-          {room.live && <Radio className="h-[11px] w-[11px]" strokeWidth={1.75} />}
-          {room.detail || (replay ? "full time" : "")}
+        <span className="flex items-center gap-[8px]">
+          {watching && (
+            <span className="flex items-center gap-[5px] rounded-full border border-[rgb(var(--c3a3320))] bg-gold/[.1] px-[8px] py-[3px]" title="Your agent is watching this for you">
+              <Eye className="h-[11px] w-[11px] text-gold" strokeWidth={2} />
+              <span className="text-[10px] font-bold tracking-[.04em] text-gold-bright">WATCHING</span>
+            </span>
+          )}
+          <span className="flex items-center gap-1 text-[11px] text-content-faint">
+            {room.live && <Radio className="h-[11px] w-[11px]" strokeWidth={1.75} />}
+            {room.detail || (replay ? "full time" : "")}
+          </span>
         </span>
       </div>
       <div className="flex items-center gap-[12px]">

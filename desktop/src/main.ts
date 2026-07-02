@@ -133,13 +133,42 @@ app.whenReady().then(async () => {
         settings.watches = (settings.watches ?? []).filter((x) => x.id !== id);
         persist();
       },
+      {
+        // while watching for the user, hang in the relay room and react to big
+        // moments — only when other agents are actually present (guards keep
+        // this safe before the relay connects)
+        peers: () => {
+          try {
+            return relayLobby?.presence?.() ?? 1;
+          } catch {
+            return 1;
+          }
+        },
+        chime: (text: string) => {
+          try {
+            relayLobby?.chime?.(text);
+          } catch {
+            /* relay not up — stay quiet */
+          }
+        },
+      },
     );
     watchers.set(entry.id, w);
     settings.watches = [...(settings.watches ?? []).filter((x) => x.id !== entry.id), entry];
     persist();
     w.start();
   };
-  for (const entry of settings.watches ?? []) armWatch(entry); // re-arm after restart
+  ipcMain.handle("watch:list", () => ({ ok: true, watches: [...watchers.values()].map((w) => w.entry) }));
+  ipcMain.handle("watch:cancel", (_e, query: string) => {
+    const teams = extractTeams(query);
+    const hit = [...watchers.values()].find((w) => teams.length && teams.every((t) => w.entry.home.toLowerCase().includes(t) || w.entry.away.toLowerCase().includes(t)));
+    if (!hit) return { ok: false, error: "no armed watch matches that" };
+    hit.stop();
+    watchers.delete(hit.entry.id);
+    settings.watches = (settings.watches ?? []).filter((x) => x.id !== hit.entry.id);
+    persist();
+    return { ok: true, home: hit.entry.home, away: hit.entry.away };
+  });
 
   // /watch <teams> — arm the background watcher (or recap right away if the
   // match already ended). Explicit invoke keeps normal chat un-hijacked.
@@ -652,6 +681,7 @@ app.whenReady().then(async () => {
     }
   });
   void connectLobby(); // if already named, join now
+  for (const entry of settings.watches ?? []) armWatch(entry); // re-arm watches after restart
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
