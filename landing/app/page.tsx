@@ -1,6 +1,7 @@
 import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
 import { ValueProp } from "@/components/ValueProp";
+import { WhyKhoros } from "@/components/WhyKhoros";
 import { Features } from "@/components/Features";
 import { HowItWorks } from "@/components/HowItWorks";
 import { ClosingCta, Footer } from "@/components/Footer";
@@ -14,6 +15,7 @@ export default function Page() {
       <main>
         <Hero />
         <ValueProp />
+        <WhyKhoros />
         <Features />
         <HowItWorks />
         <ClosingCta />
