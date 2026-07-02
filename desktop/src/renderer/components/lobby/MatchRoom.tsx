@@ -165,7 +165,7 @@ export function MatchRoom({ score, feed, crew, watching, goal, onBack, banner, o
                       <Mic className="h-[9px] w-[9px] text-cast" />
                     </span>
                   ) : (
-                    <AgentGlyph size={17} />
+                    <AgentGlyph size={17} name={c.from} />
                   )}
                   <span className={`text-[11px] font-bold ${c.from === "Commentator" ? "text-[rgb(var(--caac0de))]" : "text-content"}`}>{c.from}</span>
                   {c.told && <Undo2 className="ml-auto h-[11px] w-[11px] text-gold" strokeWidth={2} />}

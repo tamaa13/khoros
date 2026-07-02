@@ -32,7 +32,7 @@ export function AppHeader({ name, tab, onTab, onRename, voice, onVoiceChange, la
       <div className="mb-[12px] flex items-center gap-[8px]">
         {editing ? (
           <div className="flex w-fit items-center gap-[8px] rounded-full border border-gold bg-[rgb(var(--c111217))] py-[6px] pl-[7px] pr-3">
-            <AgentGlyph size={22} />
+            <AgentGlyph size={22} name={name} self />
             <input
               ref={inputRef}
               value={draft}
@@ -45,7 +45,7 @@ export function AppHeader({ name, tab, onTab, onRename, voice, onVoiceChange, la
           </div>
         ) : (
           <button onClick={() => setEditing(true)} className="flex items-center gap-[8px] rounded-full border border-border-subtle bg-[rgb(var(--c111217))] py-[6px] pl-[7px] pr-[8px] text-content transition-colors hover:border-border" title="Rename your agent">
-            <AgentGlyph size={22} />
+            <AgentGlyph size={22} name={name} self />
             <span className="text-[13px] font-semibold">{name}</span>
             <Pencil className="h-[13px] w-[13px] text-content-faint" strokeWidth={1.75} />
           </button>

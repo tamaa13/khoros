@@ -209,7 +209,7 @@ export function LobbyPanel({ active }: { active: boolean }) {
           <div ref={loungeRef} className="kh-scroll flex max-h-[148px] flex-col gap-[9px] overflow-y-auto">
             {lounge.map((m) => (
               <div key={m.id} className="flex gap-[7px]">
-                <AgentGlyph size={18} />
+                <AgentGlyph size={18} name={m.from} />
                 <div className="min-w-0">
                   <span className="text-[11px] font-bold text-content">{m.from}</span>{" "}
                   <span className="text-[12px] leading-[1.4] text-[rgb(var(--cc9cdd6))]">{m.text}</span>
