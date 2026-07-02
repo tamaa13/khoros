@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Anton, Archivo, Inter } from "next/font/google";
+import { IntroOverlay } from "@/components/IntroOverlay";
 import { MotionProvider } from "@/components/MotionProvider";
+import { SoundProvider } from "@/components/sound/SoundProvider";
 import { NightNoise } from "@/components/NightNoise";
 import "./globals.css";
 
@@ -19,8 +21,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${archivo.variable} ${anton.variable} ${inter.variable}`}>
       <body>
-        <NightNoise />
-        <MotionProvider>{children}</MotionProvider>
+        <SoundProvider>
+          <NightNoise />
+          <IntroOverlay />
+          <MotionProvider>{children}</MotionProvider>
+        </SoundProvider>
       </body>
     </html>
   );

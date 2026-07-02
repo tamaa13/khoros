@@ -1,5 +1,6 @@
 import { DownloadButton } from "./DownloadButton";
 import { Mark } from "./Mark";
+import { SoundToggle } from "./sound/SoundToggle";
 
 const REPO = "https://github.com/tamaa13/khoros";
 
@@ -10,7 +11,8 @@ export function Navbar() {
         <Mark size={26} />
         <span className="display text-[17px] tracking-[.02em]">KHOROS</span>
         <span className="kicker mt-[3px] hidden sm:block">· on-device society</span>
-        <div className="ml-auto flex items-center gap-5">
+        <div className="ml-auto flex items-center gap-4">
+          <SoundToggle />
           <a href="/#how" className="hidden text-[13.5px] text-fog-2 transition-colors hover:text-fog sm:block">
             How it works
           </a>
