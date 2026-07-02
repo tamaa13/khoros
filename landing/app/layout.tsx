@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Anton, Archivo, Inter } from "next/font/google";
 import { MotionProvider } from "@/components/MotionProvider";
+import { NightNoise } from "@/components/NightNoise";
 import "./globals.css";
 
 const archivo = Archivo({ subsets: ["latin"], variable: "--font-archivo", axes: ["wdth"] });
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${archivo.variable} ${anton.variable} ${inter.variable}`}>
       <body>
+        <NightNoise />
         <MotionProvider>{children}</MotionProvider>
       </body>
     </html>

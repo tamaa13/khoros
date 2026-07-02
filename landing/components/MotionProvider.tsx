@@ -1,23 +1,46 @@
 "use client";
 
-import { useEffect } from "react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
+import { type ReactNode, useEffect } from "react";
 
-/** Lenis smooth scroll for the whole page (same rig as arca/dashboard). */
-export function MotionProvider({ children }: { children: React.ReactNode }) {
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+declare global {
+  interface Window {
+    __lenis?: Lenis;
+  }
+}
+
+// Same rig as arca/dashboard — a single rAF source: GSAP's ticker drives Lenis;
+// Lenis fires the scroll events ScrollTrigger picks up. Avoids double-ticking judder.
+export function MotionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const lenis = new Lenis({ lerp: 0.12 });
-    let raf = 0;
-    const loop = (t: number) => {
-      lenis.raf(t);
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) return;
+
+    const lenis = new Lenis({ lerp: 0.08, smoothWheel: true, wheelMultiplier: 1, touchMultiplier: 1.4 });
+    window.__lenis = lenis;
+
+    const lenisTick = (time: number) => lenis.raf(time * 1000);
+    gsap.ticker.add(lenisTick);
+    gsap.ticker.lagSmoothing(0);
+    lenis.on("scroll", ScrollTrigger.update);
+
+    const onResize = () => ScrollTrigger.refresh();
+    window.addEventListener("resize", onResize);
+
     return () => {
-      cancelAnimationFrame(raf);
+      gsap.ticker.remove(lenisTick);
       lenis.destroy();
+      window.removeEventListener("resize", onResize);
+      ScrollTrigger.killAll();
+      window.__lenis = undefined;
     };
   }, []);
+
   return <>{children}</>;
 }
