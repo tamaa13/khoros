@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Brain, Calendar, CircleHelp, Dna, Ear, Globe, Languages, Loader2, Mic, Paperclip, Pencil, ScanText, Search, Send, Sparkles, Trash2, Users, Volume2 } from "lucide-react";
+import { Brain, Calendar, CircleHelp, Dna, Ear, Eye, Globe, History, Languages, Loader2, Mic, Paperclip, Pencil, ScanText, Search, Send, Sparkles, Trash2, Users, Volume2 } from "lucide-react";
 import type { MicStatus } from "../../hooks/useMic";
 
 interface Cmd {
@@ -11,6 +11,8 @@ const COMMANDS: Cmd[] = [
   { name: "/imagine", desc: "generate an image", icon: <Sparkles /> },
   { name: "/voice", desc: "agent speaks replies", icon: <Volume2 /> },
   { name: "/translate", desc: "translate a message", icon: <Languages /> },
+  { name: "/watch", desc: "agent watches a match for you", icon: <Eye /> },
+  { name: "/recap", desc: "recap a finished match", icon: <History /> },
   { name: "/listen", desc: "transcribe live audio", icon: <Ear /> },
   { name: "/read", desc: "read text from a photo (OCR)", icon: <ScanText /> },
   { name: "/evolve", desc: "fine-tune on your takes", icon: <Dna /> },
