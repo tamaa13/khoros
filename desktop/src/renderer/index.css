@@ -137,21 +137,37 @@
 @layer components {
   /* Stadium-night backdrop behind the whole app (placeholder until a real
      night/day photo is dropped in). Glass surfaces sit over this. */
-  .app-backdrop {
+  /* The stadium backdrop lives on its own composited fixed layer.
+     (background-attachment: fixed forces a full-window gradient repaint on
+     every scroll frame — that was the scroll jank.) */
+  .app-backdrop::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    transform: translateZ(0);
     background:
       radial-gradient(130% 90% at 50% -15%, rgba(244, 196, 76, 0.08), transparent 48%),
       radial-gradient(120% 70% at 85% 112%, rgba(61, 169, 104, 0.06), transparent 55%),
       radial-gradient(90% 60% at 8% 8%, rgba(110, 147, 204, 0.05), transparent 55%),
       linear-gradient(180deg, #0b0e15, #08090c 55%, #060709);
-    background-attachment: fixed;
   }
-  .light .app-backdrop {
+  .light .app-backdrop::before {
     background:
       radial-gradient(130% 90% at 50% -15%, rgba(201, 154, 46, 0.16), transparent 50%),
       radial-gradient(120% 70% at 85% 112%, rgba(61, 169, 104, 0.1), transparent 55%),
       radial-gradient(90% 60% at 8% 8%, rgba(110, 147, 204, 0.08), transparent 55%),
       linear-gradient(180deg, #f6f2e8, #efece3 52%, #e7e2d6);
-    background-attachment: fixed;
+  }
+  /* Cross-fade the whole UI while the theme class flips (added for ~400ms). */
+  .theme-fade,
+  .theme-fade * {
+    transition:
+      background-color 0.28s ease-out,
+      color 0.28s ease-out,
+      border-color 0.28s ease-out,
+      fill 0.28s ease-out,
+      stroke 0.28s ease-out !important;
   }
   /* Translucent "glass" surface — sits over the backdrop. */
   .glass {

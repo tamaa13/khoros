@@ -84,6 +84,14 @@ export function App() {
     void khoros.setSettings({ voice: v });
   }, []);
 
+  // Flip the theme under a brief global color transition (see .theme-fade).
+  const changeTheme = useCallback((t: "dark" | "light") => {
+    const el = document.documentElement;
+    el.classList.add("theme-fade");
+    window.setTimeout(() => el.classList.remove("theme-fade"), 400);
+    setTheme(t);
+  }, []);
+
   const changeLanguage = useCallback((l: string) => {
     setLanguage(l);
     void khoros.setSettings({ language: /^english$/i.test(l) ? "" : l });
@@ -96,12 +104,14 @@ export function App() {
       {phase === "boot" && <Boot name={name} status={bootStatus} progress={bootProgress} />}
       {phase === "app" && (
         <>
-          <AppHeader name={name} tab={tab} onTab={setTab} onRename={onRename} voice={voice} onVoiceChange={changeVoice} language={language} onLanguageChange={changeLanguage} theme={theme} onThemeChange={setTheme} searchOpen={searchOpen} onToggleSearch={() => setSearchOpen((s) => !s)} />
+          <AppHeader name={name} tab={tab} onTab={setTab} onRename={onRename} voice={voice} onVoiceChange={changeVoice} language={language} onLanguageChange={changeLanguage} theme={theme} onThemeChange={changeTheme} searchOpen={searchOpen} onToggleSearch={() => setSearchOpen((s) => !s)} />
           <div className="relative min-h-0 flex-1">
-            <div className={tab === "agent" ? "h-full" : "hidden h-full"}>
+            {/* display:none → block restarts the CSS animation, so each tab
+                switch gets the same soft fade-slide entrance */}
+            <div className={tab === "agent" ? "h-full animate-tab-in" : "hidden h-full"}>
               <ChatPanel name={name} onRename={onRename} voice={voice} onVoiceChange={changeVoice} searchOpen={searchOpen} onCloseSearch={() => setSearchOpen(false)} />
             </div>
-            <div className={tab === "lobby" ? "h-full" : "hidden h-full"}>
+            <div className={tab === "lobby" ? "h-full animate-tab-in" : "hidden h-full"}>
               <LobbyPanel active={tab === "lobby"} />
             </div>
           </div>

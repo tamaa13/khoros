@@ -21,7 +21,7 @@ export function LobbyPanel({ active }: { active: boolean }) {
   const loungeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    loungeRef.current?.scrollTo({ top: loungeRef.current.scrollHeight });
+    loungeRef.current?.scrollTo({ top: loungeRef.current.scrollHeight, behavior: "smooth" });
   }, [lounge]);
 
   // The Lounge auto-discussion (the user's agent + a house pundit) only runs
