@@ -3,6 +3,8 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("khoros", {
   ask: (text) => ipcRenderer.invoke("ask", text),
+  // proactive agent messages (e.g. "watched the match for you" recaps)
+  onNotify: (cb) => ipcRenderer.on("chat:notify", (_e, p) => cb(p)),
   onStatus: (cb) => ipcRenderer.on("status", (_e, s) => cb(s)),
   onProgress: (cb) => ipcRenderer.on("progress", (_e, p) => cb(p)),
   onReady: (cb) => ipcRenderer.on("ready", (_e, ctx) => cb(ctx)),

@@ -9,6 +9,8 @@ export interface Settings {
   agentName?: string;
   language?: string; // undefined = English (the persona default)
   voice?: boolean;
+  // matches the agent is watching for the user — re-armed on boot
+  watches?: { id: string; home: string; away: string }[];
 }
 
 export function loadSettings(file: string): Settings {

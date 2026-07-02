@@ -118,8 +118,63 @@ app.whenReady().then(async () => {
     }
   }, 60_000);
 
+  // ---- "watch it for me": the agent watches a match in the background and
+  // reports back in the My Agent chat; also on-demand recaps of past matches ----
+  const { MatchWatcher, extractTeams, findFixture, recapMatch } = await import("./watcher");
+  const watchers = new Map<string, InstanceType<typeof MatchWatcher>>();
+  const armWatch = (entry: { id: string; home: string; away: string }) => {
+    if (watchers.has(entry.id)) return;
+    const w = new MatchWatcher(
+      entry,
+      agent,
+      (text: string) => send("chat:notify", { text: `📺 ${entry.home} vs ${entry.away} — full time. ${text}` }),
+      (id: string) => {
+        watchers.delete(id);
+        settings.watches = (settings.watches ?? []).filter((x) => x.id !== id);
+        persist();
+      },
+    );
+    watchers.set(entry.id, w);
+    settings.watches = [...(settings.watches ?? []).filter((x) => x.id !== entry.id), entry];
+    persist();
+    w.start();
+  };
+  for (const entry of settings.watches ?? []) armWatch(entry); // re-arm after restart
+
+  const WATCH_INTENT = /\b(tonton|nonton|watch)\w*\b/i;
+  const RECAP_INTENT = /\b(recap|rekap|rangkum|ringkas|summar\w*|hasil|result)\w*\b/i;
+
   ipcMain.handle("ask", async (_e, text: string) => {
     try {
+      // Match-watching intents — resolved against real fixtures before the
+      // normal chat turn, so "tontonin Portugal vs Kroasia" arms a watcher.
+      if (WATCH_INTENT.test(text) || RECAP_INTENT.test(text)) {
+        const teams = extractTeams(text);
+        // recap looks backward first, watch looks forward first
+        const fx = await findFixture(teams, WATCH_INTENT.test(text) ? "upcoming" : "recent").catch(() => null);
+        if (fx?.id) {
+          const { matchRoom } = await import("../../tools/football");
+          const state = (await matchRoom(fx.id).catch(() => null))?.state ?? "pre";
+          if (state === "post") {
+            // already finished → recap right now (both intents land here)
+            const recap = await recapMatch(agent, fx.id);
+            if (recap) return { reply: recap, callback: null, tools: ["watch_recap"] };
+          } else if (WATCH_INTENT.test(text)) {
+            armWatch({ id: fx.id, home: fx.home, away: fx.away });
+            const when = fx.time ? ` (${fx.date} ${fx.time} UTC)` : ` (${fx.date})`;
+            const { reply } = await agent.turn(
+              `The user asked you to watch ${fx.home} vs ${fx.away}${when} for them because they can't. You've set it up — you'll follow the real match and report back here when it ends. Confirm this to them warmly in ONE short line.`,
+              { learnPredictions: false, allowCallback: false, useTools: false, ephemeral: true },
+            );
+            return { reply, callback: null, tools: ["watch_match"] };
+          } else {
+            // recap asked for a match that hasn't finished yet
+            const when = state === "in" ? "still in play" : `not started yet — kicks off ${fx.date}${fx.time ? " " + fx.time + " UTC" : ""}`;
+            return { reply: `${fx.home} vs ${fx.away} is ${when}. Want me to watch it and report back when it's done?`, callback: null, tools: [] };
+          }
+        }
+        // fall through to the normal turn when no fixture matched
+      }
       // Real-photo intent: asking for a photo of a player/team → fetch the ACTUAL
       // image (Wikipedia/TheSportsDB), not a generated one. (/imagine = generated.)
       if (/\b(foto|photo|gambar|pic|picture|tampil(?:in|kan)?|liat(?:in)?|show me|wajah|rupa)\b/i.test(text)) {

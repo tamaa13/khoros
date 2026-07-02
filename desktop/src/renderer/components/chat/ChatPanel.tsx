@@ -55,6 +55,14 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange, searchOpen, on
       const pct = p.phase === "gen" && p.total ? Math.round(((p.step ?? 0) / p.total) * 100) : p.pct;
       if (typeof pct === "number") setGen({ pct });
     });
+    // Proactive agent messages — e.g. the recap after it watched a match for you.
+    khoros.onNotify((p) => {
+      if (p?.text) {
+        push({ role: "agent", text: p.text });
+        void speakReply(p.text);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // First paint jumps straight to the latest message (smooth-scrolling through
