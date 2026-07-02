@@ -91,6 +91,8 @@ export interface MemoryEntry {
 export interface KhorosAPI {
   ask(text: string): Promise<AskResult>;
   onNotify(cb: (p: { text: string }) => void): void;
+  watchMatch(q: string): Promise<OkResult & { kind?: "armed" | "recap"; reply?: string }>;
+  recapMatch(q: string): Promise<OkResult & { kind?: "recap" | "pending"; reply?: string }>;
   onStatus(cb: (s: string) => void): void;
   onProgress(cb: (p: unknown) => void): void;
   onReady(cb: (ctx: ReadyCtx) => void): void;

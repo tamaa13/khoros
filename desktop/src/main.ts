@@ -141,40 +141,53 @@ app.whenReady().then(async () => {
   };
   for (const entry of settings.watches ?? []) armWatch(entry); // re-arm after restart
 
-  const WATCH_INTENT = /\b(tonton|nonton|watch)\w*\b/i;
-  const RECAP_INTENT = /\b(recap|rekap|rangkum|ringkas|summar\w*|hasil|result)\w*\b/i;
+  // /watch <teams> — arm the background watcher (or recap right away if the
+  // match already ended). Explicit invoke keeps normal chat un-hijacked.
+  ipcMain.handle("watch:arm", async (_e, query: string) => {
+    try {
+      const teams = extractTeams(query);
+      if (!teams.length) return { ok: false, error: "no team recognized" };
+      const fx = await findFixture(teams, "upcoming");
+      if (!fx?.id) return { ok: false, error: `no World Cup fixture found for "${teams.join(" vs ")}"` };
+      const { matchRoom } = await import("../../tools/football");
+      const state = (await matchRoom(fx.id).catch(() => null))?.state ?? "pre";
+      if (state === "post") {
+        const reply = await recapMatch(agent, fx.id);
+        return reply ? { ok: true, kind: "recap", reply } : { ok: false, error: "couldn't build the recap" };
+      }
+      armWatch({ id: fx.id, home: fx.home, away: fx.away });
+      const when = fx.time ? ` (${fx.date} ${fx.time} UTC)` : ` (${fx.date})`;
+      const { reply } = await agent.turn(
+        `The user asked you to watch ${fx.home} vs ${fx.away}${when} for them because they can't. You've set it up — you'll follow the real match and report back here when it ends. Confirm this to them warmly in ONE short line.`,
+        { learnPredictions: false, allowCallback: false, useTools: false, ephemeral: true },
+      );
+      return { ok: true, kind: "armed", reply };
+    } catch (e: any) {
+      return { ok: false, error: String(e?.message ?? e) };
+    }
+  });
+  // /recap <teams> — recap a finished match on demand.
+  ipcMain.handle("watch:recap", async (_e, query: string) => {
+    try {
+      const teams = extractTeams(query);
+      if (!teams.length) return { ok: false, error: "no team recognized" };
+      const fx = await findFixture(teams, "recent");
+      if (!fx?.id) return { ok: false, error: `no World Cup fixture found for "${teams.join(" vs ")}"` };
+      const { matchRoom } = await import("../../tools/football");
+      const state = (await matchRoom(fx.id).catch(() => null))?.state ?? "pre";
+      if (state !== "post") {
+        const when = state === "in" ? "still in play" : `not started yet — kicks off ${fx.date}${fx.time ? " " + fx.time + " UTC" : ""}`;
+        return { ok: true, kind: "pending", reply: `${fx.home} vs ${fx.away} is ${when}. Use /watch to have me follow it and report back.` };
+      }
+      const reply = await recapMatch(agent, fx.id);
+      return reply ? { ok: true, kind: "recap", reply } : { ok: false, error: "couldn't build the recap" };
+    } catch (e: any) {
+      return { ok: false, error: String(e?.message ?? e) };
+    }
+  });
 
   ipcMain.handle("ask", async (_e, text: string) => {
     try {
-      // Match-watching intents — resolved against real fixtures before the
-      // normal chat turn, so "tontonin Portugal vs Kroasia" arms a watcher.
-      if (WATCH_INTENT.test(text) || RECAP_INTENT.test(text)) {
-        const teams = extractTeams(text);
-        // recap looks backward first, watch looks forward first
-        const fx = await findFixture(teams, WATCH_INTENT.test(text) ? "upcoming" : "recent").catch(() => null);
-        if (fx?.id) {
-          const { matchRoom } = await import("../../tools/football");
-          const state = (await matchRoom(fx.id).catch(() => null))?.state ?? "pre";
-          if (state === "post") {
-            // already finished → recap right now (both intents land here)
-            const recap = await recapMatch(agent, fx.id);
-            if (recap) return { reply: recap, callback: null, tools: ["watch_recap"] };
-          } else if (WATCH_INTENT.test(text)) {
-            armWatch({ id: fx.id, home: fx.home, away: fx.away });
-            const when = fx.time ? ` (${fx.date} ${fx.time} UTC)` : ` (${fx.date})`;
-            const { reply } = await agent.turn(
-              `The user asked you to watch ${fx.home} vs ${fx.away}${when} for them because they can't. You've set it up — you'll follow the real match and report back here when it ends. Confirm this to them warmly in ONE short line.`,
-              { learnPredictions: false, allowCallback: false, useTools: false, ephemeral: true },
-            );
-            return { reply, callback: null, tools: ["watch_match"] };
-          } else {
-            // recap asked for a match that hasn't finished yet
-            const when = state === "in" ? "still in play" : `not started yet — kicks off ${fx.date}${fx.time ? " " + fx.time + " UTC" : ""}`;
-            return { reply: `${fx.home} vs ${fx.away} is ${when}. Want me to watch it and report back when it's done?`, callback: null, tools: [] };
-          }
-        }
-        // fall through to the normal turn when no fixture matched
-      }
       // Real-photo intent: asking for a photo of a player/team → fetch the ACTUAL
       // image (Wikipedia/TheSportsDB), not a generated one. (/imagine = generated.)
       if (/\b(foto|photo|gambar|pic|picture|tampil(?:in|kan)?|liat(?:in)?|show me|wajah|rupa)\b/i.test(text)) {

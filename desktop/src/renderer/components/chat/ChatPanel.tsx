@@ -104,7 +104,7 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange, searchOpen, on
       switch (cmd) {
         case "help":
           return addSystem(
-            ["/imagine <prompt> — generate an image", "/voice on|off — spoken replies", "/translate <text> — on-device translation", "/listen — voice input (/listen test = self-test)", "/read <path> — read text from a photo (or use 📎)", "/evolve [now|status|apply] — fine-tune on your style", "/memories · /recall <q> — memory", "/schedule [recent] — fixtures/results", "/name <name> · /language <lang>", "/lobby · /clear"].join("\n"),
+            ["/imagine <prompt> — generate an image", "/voice on|off — spoken replies", "/translate <text> — on-device translation", "/watch <team vs team> — I'll watch it and report back", "/recap <team> — recap a finished match", "/listen — voice input (/listen test = self-test)", "/read <path> — read text from a photo (or use 📎)", "/evolve [now|status|apply] — fine-tune on your style", "/memories · /recall <q> — memory", "/schedule [recent] — fixtures/results", "/name <name> · /language <lang>", "/lobby · /clear"].join("\n"),
           );
         case "clear":
           return setMsgs([]);
@@ -156,6 +156,26 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange, searchOpen, on
           addSystem("…fine-tuning a small LoRA on-device (watch the loss drop)");
           const r = (await khoros.finetuneSelfTest()) as Record<string, any>;
           return addSystem(r?.skipped ? `Evolve skipped: ${r.reason}. Memory personalization stays on.` : r?.ok ? `✅ Evolved — loss ${r.firstLoss?.toFixed?.(3) ?? "?"} → ${r.finalLoss?.toFixed?.(3) ?? "?"}.` : `evolve failed: ${r?.error ?? "unknown"}`);
+        }
+        case "watch": {
+          if (!arg) return addSystem("Usage: /watch <team vs team> — I'll follow the match and report back when it ends.");
+          setTyping(true);
+          const r = await khoros.watchMatch(arg).catch(() => null);
+          setTyping(false);
+          if (!r?.ok) return addSystem(`couldn't set that up: ${r?.error ?? "unknown"}`);
+          push({ role: "agent", text: r.reply ?? "On it — I'll report back at full time." });
+          if (r.reply) speakReply(r.reply);
+          return;
+        }
+        case "recap": {
+          if (!arg) return addSystem("Usage: /recap <team> — recap of a finished match.");
+          setTyping(true);
+          const r = await khoros.recapMatch(arg).catch(() => null);
+          setTyping(false);
+          if (!r?.ok) return addSystem(`no recap: ${r?.error ?? "unknown"}`);
+          push({ role: "agent", text: r.reply ?? "" });
+          if (r.reply) speakReply(r.reply);
+          return;
         }
         case "read": {
           if (!arg) return addSystem("Usage: /read <path-to-image> — I'll read the text in it (on-device OCR).");
