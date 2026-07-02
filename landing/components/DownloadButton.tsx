@@ -11,8 +11,8 @@ const RELEASE = "https://github.com/tamaa13/khoros/releases/download/v0.1.0";
 type Os = "mac" | "win" | "linux";
 const TARGETS: { os: Os; name: string; sub: string; url: string }[] = [
   { os: "mac", name: "macOS", sub: ".dmg · Apple Silicon · 230 MB", url: `${RELEASE}/Khoros.dmg` },
-  { os: "win", name: "Windows", sub: ".exe · x64 · 460 MB", url: `${RELEASE}/Khoros-Setup.exe` },
-  { os: "linux", name: "Linux", sub: ".deb · x64 · 330 MB", url: `${RELEASE}/khoros_0.1.0_amd64.deb` },
+  { os: "win", name: "Windows", sub: ".exe · x64 · 440 MB", url: `${RELEASE}/Khoros-Setup.exe` },
+  { os: "linux", name: "Linux", sub: ".deb · x64 · 320 MB", url: `${RELEASE}/khoros_0.1.0_amd64.deb` },
 ];
 
 function detect(): Os {
