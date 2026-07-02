@@ -90,6 +90,7 @@ export interface MemoryEntry {
 
 export interface KhorosAPI {
   ask(text: string): Promise<AskResult>;
+  onNotify(cb: (p: { text: string }) => void): void;
   onStatus(cb: (s: string) => void): void;
   onProgress(cb: (p: unknown) => void): void;
   onReady(cb: (ctx: ReadyCtx) => void): void;
