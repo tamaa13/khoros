@@ -98,11 +98,12 @@ export function LobbyPanel({ active }: { active: boolean }) {
   if (view === "room") return <MatchRoom score={score} feed={feed} crew={crew} watching={watching} goal={goal} onBack={back} />;
 
   return (
-    <div className="kh-scroll h-full overflow-y-auto px-4 py-[18px]">
+    <div className="kh-scroll h-full overflow-y-auto px-4 py-[14px]">
       {/* Lounge — the society of agents talking World Cup on its own (the user's
           own agent + a house pundit, plus real agents from other devices). Not a
-          user chat box — you watch the agents discuss. */}
-      <div className="mb-[18px] rounded-[16px] border border-border-subtle bg-surface-0/70 p-[14px]">
+          user chat box — you watch the agents discuss. Capped short: it's ambient;
+          picking a room is the job, so ≥2 cards stay above the fold. */}
+      <div className="mb-[14px] rounded-[16px] border border-border-subtle bg-surface-0/70 p-[13px]">
         <div className="mb-[10px] flex items-center gap-[8px]">
           <span className="relative h-[7px] w-[7px]">
             <span className="absolute inset-0 rounded-full bg-gold animate-pulse-dot" />
@@ -120,7 +121,7 @@ export function LobbyPanel({ active }: { active: boolean }) {
             Your agent and the lounge are warming up…
           </div>
         ) : (
-          <div ref={loungeRef} className="kh-scroll flex max-h-[230px] flex-col gap-[9px] overflow-y-auto">
+          <div ref={loungeRef} className="kh-scroll flex max-h-[148px] flex-col gap-[9px] overflow-y-auto">
             {lounge.map((m) => (
               <div key={m.id} className="flex gap-[7px]">
                 <AgentGlyph size={18} />
@@ -169,8 +170,8 @@ function RoomCard({ room, onClick }: { room: RoomChoice; onClick: () => void }) 
   const replay = room.state === "post";
   const played = room.homeScore != null && room.awayScore != null;
   return (
-    <button onClick={onClick} className={`rounded-[16px] border p-[15px] text-left transition-all duration-fast hover:-translate-y-[2px] ${replay ? "border-border-subtle bg-surface-0 opacity-90 hover:opacity-100" : "border-border bg-[rgb(var(--c111217))] hover:border-border-strong"} ${room.live ? "hover:shadow-[0_0_22px_-4px_rgba(209,65,80,.5)]" : ""}`}>
-      <div className="mb-[13px] flex items-center justify-between">
+    <button onClick={onClick} className={`rounded-[16px] border p-[13px] text-left transition-all duration-fast hover:-translate-y-[2px] ${replay ? "border-border-subtle bg-surface-0 opacity-90 hover:opacity-100" : "border-border bg-[rgb(var(--c111217))] hover:border-border-strong"} ${room.live ? "hover:shadow-[0_0_22px_-4px_rgba(209,65,80,.5)]" : ""}`}>
+      <div className="mb-[10px] flex items-center justify-between">
         {room.live ? (
           <span className="flex items-center gap-[6px] rounded-full border border-[rgb(var(--c4d2026))] bg-live/[.14] px-[9px] py-[4px]">
             <span className="h-[7px] w-[7px] rounded-full bg-live animate-pulse-dot" />

@@ -119,15 +119,15 @@ export function Composer({
         <button
           onClick={onAttach}
           disabled={disabled}
-          className="flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[11px] border border-border-subtle bg-[rgb(var(--c181920))] text-content-muted transition-colors hover:text-content disabled:opacity-50"
+          className="flex h-[34px] w-[32px] flex-shrink-0 items-center justify-center rounded-[9px] text-content-muted transition-colors hover:text-content disabled:opacity-50"
           aria-label="Share a photo"
         >
-          <Paperclip className="h-[16px] w-[16px]" strokeWidth={1.75} />
+          <Paperclip className="h-[17px] w-[17px]" strokeWidth={1.75} />
         </button>
         <button
           onClick={onMic}
           disabled={transcribing}
-          className={`flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[11px] border transition-colors ${recording ? "border-gold bg-gold text-gold-fg" : transcribing ? "border-gold-deep bg-[rgb(var(--c181920))] text-gold" : "border-border-subtle bg-[rgb(var(--c181920))] text-content-muted hover:text-content"}`}
+          className={`flex h-[34px] w-[32px] flex-shrink-0 items-center justify-center rounded-[9px] transition-colors ${recording ? "bg-gold text-gold-fg" : transcribing ? "text-gold" : "text-content-muted hover:text-content"}`}
           aria-label="Voice input"
         >
           {transcribing ? <Loader2 className="h-[17px] w-[17px] animate-spin" strokeWidth={2} /> : <Mic className="h-[17px] w-[17px]" strokeWidth={1.75} />}

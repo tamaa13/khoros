@@ -19,6 +19,7 @@ export function App() {
   const [voice, setVoice] = useState(false);
   const [language, setLanguage] = useState("English");
   const [theme, setTheme] = useState<"dark" | "light">(() => (typeof localStorage !== "undefined" && localStorage.getItem("khoros.theme") === "light" ? "light" : "dark"));
+  const [searchOpen, setSearchOpen] = useState(false);
   const decided = useRef(false);
 
   useEffect(() => {
@@ -95,10 +96,10 @@ export function App() {
       {phase === "boot" && <Boot name={name} status={bootStatus} progress={bootProgress} />}
       {phase === "app" && (
         <>
-          <AppHeader name={name} tab={tab} onTab={setTab} onRename={onRename} voice={voice} onVoiceChange={changeVoice} language={language} onLanguageChange={changeLanguage} theme={theme} onThemeChange={setTheme} />
+          <AppHeader name={name} tab={tab} onTab={setTab} onRename={onRename} voice={voice} onVoiceChange={changeVoice} language={language} onLanguageChange={changeLanguage} theme={theme} onThemeChange={setTheme} searchOpen={searchOpen} onToggleSearch={() => setSearchOpen((s) => !s)} />
           <div className="relative min-h-0 flex-1">
             <div className={tab === "agent" ? "h-full" : "hidden h-full"}>
-              <ChatPanel name={name} onRename={onRename} voice={voice} onVoiceChange={changeVoice} />
+              <ChatPanel name={name} onRename={onRename} voice={voice} onVoiceChange={changeVoice} searchOpen={searchOpen} onCloseSearch={() => setSearchOpen(false)} />
             </div>
             <div className={tab === "lobby" ? "h-full" : "hidden h-full"}>
               <LobbyPanel active={tab === "lobby"} />
