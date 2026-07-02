@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Brain, Calendar, CircleHelp, Dna, Ear, Eye, Globe, History, Languages, Loader2, Mic, Paperclip, Pencil, ScanText, Search, Send, Sparkles, Trash2, Users, Volume2 } from "lucide-react";
 import type { MicStatus } from "../../hooks/useMic";
 
@@ -60,22 +60,68 @@ export function Composer({
   const recording = mic === "listening";
   const transcribing = mic === "transcribing";
 
+  // keyboard navigation for the command menu: ↑↓ select, Enter/Tab complete, Esc close
+  const [sel, setSel] = useState(0);
+  const [dismissed, setDismissed] = useState(false);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  useEffect(() => {
+    setSel(0);
+    setDismissed(false);
+  }, [value]);
+  const menuOpen = slash && matches.length > 0 && !dismissed;
+  const selIdx = Math.min(sel, Math.max(0, matches.length - 1));
+  useEffect(() => {
+    if (menuOpen) itemRefs.current[selIdx]?.scrollIntoView({ block: "nearest" });
+  }, [selIdx, menuOpen]);
+
+  const onKeys = (e: React.KeyboardEvent) => {
+    if (menuOpen) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        return setSel((s) => (s + 1) % matches.length);
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        return setSel((s) => (s - 1 + matches.length) % matches.length);
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        return setDismissed(true);
+      }
+      if (e.key === "Tab" || (e.key === "Enter" && value.toLowerCase() !== matches[selIdx]!.name)) {
+        e.preventDefault();
+        return onPick(matches[selIdx]!.name + " ");
+      }
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onSubmit();
+    }
+  };
+
   return (
     <div className="relative flex-shrink-0 border-t border-[rgb(var(--c1f2128))] bg-[rgb(var(--c0c0d11))] px-[14px] pb-4 pt-3">
       {/* slash command popover */}
-      {slash && matches.length > 0 && (
+      {menuOpen && (
         <div className="absolute bottom-[74px] left-[14px] right-[14px] overflow-hidden rounded-[16px] border border-border bg-surface-1 shadow-pop animate-rise">
-          <div className="border-b border-[rgb(var(--c1f2128))] px-[14px] py-[9px] text-[10.5px] font-bold uppercase tracking-[.1em] text-content-faint">Commands</div>
+          <div className="flex items-center justify-between border-b border-[rgb(var(--c1f2128))] px-[14px] py-[9px]">
+            <span className="text-[10.5px] font-bold uppercase tracking-[.1em] text-content-faint">Commands</span>
+            <span className="text-[10.5px] text-content-faint">↑↓ · Enter</span>
+          </div>
           <div className="kh-scroll max-h-[230px] overflow-y-auto">
             {matches.map((c, i) => (
               <button
                 key={c.name}
+                ref={(el) => {
+                  itemRefs.current[i] = el;
+                }}
                 onClick={() => onPick(c.name + " ")}
-                className={`flex w-full items-center gap-3 px-[14px] py-[10px] text-left transition-colors ${i === 0 ? "border-l-2 border-gold bg-gold/[.08]" : "hover:bg-surface-2"}`}
+                onMouseEnter={() => setSel(i)}
+                className={`flex w-full items-center gap-3 px-[14px] py-[10px] text-left transition-colors ${i === selIdx ? "bg-gold/[.1]" : ""}`}
               >
-                <span className={i === 0 ? "text-gold" : "text-content-muted"}>{wrapIcon(c.icon)}</span>
+                <span className={i === selIdx ? "text-gold" : "text-content-muted"}>{wrapIcon(c.icon)}</span>
                 <span className="flex-1 text-[13px]">
-                  <span className={`font-mono ${i === 0 ? "text-content" : "text-[rgb(var(--cc9cdd6))]"}`}>{c.name}</span> <span className="text-[12.5px] text-content-faint">— {c.desc}</span>
+                  <span className={`font-mono ${i === selIdx ? "text-content" : "text-[rgb(var(--cc9cdd6))]"}`}>{c.name}</span> <span className="text-[12.5px] text-content-faint">— {c.desc}</span>
                 </span>
               </button>
             ))}
@@ -107,12 +153,7 @@ export function Composer({
           <input
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                onSubmit();
-              }
-            }}
+            onKeyDown={onKeys}
             disabled={disabled}
             placeholder={`Message ${name}…`}
             className={`min-w-0 flex-1 bg-transparent py-2 text-[14px] outline-none placeholder:text-content-faint ${value.startsWith("/") ? "font-mono text-gold-bright" : "text-content"}`}
