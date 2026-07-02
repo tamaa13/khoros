@@ -35,7 +35,7 @@ contextBridge.exposeInMainWorld("khoros", {
   schedule: (when) => ipcRenderer.invoke("schedule", when),
   // live match room (real match → scoreboard + event feed + agents)
   lobbyRooms: () => ipcRenderer.invoke("lobby:rooms"),
-  startLobby: (roomId) => ipcRenderer.invoke("lobby:start", roomId),
+  startLobby: (roomId, fromIndex) => ipcRenderer.invoke("lobby:start", roomId, fromIndex),
   stopLobby: () => ipcRenderer.invoke("lobby:stop"),
   onLobbyStatus: (cb) => ipcRenderer.on("lobby:status", (_e, s) => cb(s)),
   onLobbyMessage: (cb) => ipcRenderer.on("lobby:message", (_e, m) => cb(m)),

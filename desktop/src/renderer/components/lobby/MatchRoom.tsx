@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ChevronLeft, Mic, Undo2, Users } from "lucide-react";
+import { ChevronLeft, Mic, Play, RotateCcw, Undo2, Users } from "lucide-react";
 import { AgentGlyph } from "../Logo";
 
 export interface Score {
@@ -33,7 +33,7 @@ export interface CrewMsg {
 const CONFETTI = ["rgb(var(--cf4c44c))", "rgb(var(--c3da968))", "rgb(var(--cf1f2f5))", "rgb(var(--cf4c44c))", "rgb(var(--c3da968))", "rgb(var(--cc49a33))"];
 const KEY_LABEL: Record<string, string> = { "⚽": "GOAL", "🟥": "RED CARD", "🟨": "YELLOW", "🎯": "PENALTY", "🔁": "SUB", "🔄": "SUB" };
 
-export function MatchRoom({ score, feed, crew, watching, goal, onBack }: { score: Score | null; feed: FeedRow[]; crew: CrewMsg[]; watching: number; goal: boolean; onBack: () => void }) {
+export function MatchRoom({ score, feed, crew, watching, goal, onBack, banner, onResume, onRestart }: { score: Score | null; feed: FeedRow[]; crew: CrewMsg[]; watching: number; goal: boolean; onBack: () => void; banner: "resume" | "rewatch" | null; onResume: () => void; onRestart: () => void }) {
   const feedRef = useRef<HTMLDivElement>(null);
   const crewRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -56,6 +56,22 @@ export function MatchRoom({ score, feed, crew, watching, goal, onBack }: { score
           </div>
         )}
       </div>
+
+      {/* left the room mid-replay (resume) or after full time (rewatch) —
+          watching again is a choice, never forced */}
+      {banner && (
+        <div className="flex flex-shrink-0 items-center gap-[10px] border-b border-[rgb(var(--c3a3320))] bg-gold/[.08] px-[14px] py-[8px] animate-rise">
+          <span className="min-w-0 flex-1 text-[12px] leading-[1.35] text-gold-bright">{banner === "resume" ? "Paused where you left off." : "Full time — you watched this one."}</span>
+          {banner === "resume" && (
+            <button onClick={onResume} className="flex items-center gap-[5px] rounded-full bg-gold px-[11px] py-[5px] text-[11.5px] font-bold text-gold-fg transition-transform hover:-translate-y-px">
+              <Play className="h-[11px] w-[11px]" strokeWidth={2.5} /> Resume
+            </button>
+          )}
+          <button onClick={onRestart} className="flex items-center gap-[5px] rounded-full border border-[rgb(var(--c3a3320))] px-[11px] py-[5px] text-[11.5px] font-semibold text-gold-bright transition-colors hover:bg-gold/[.12]">
+            <RotateCcw className="h-[11px] w-[11px]" strokeWidth={2.25} /> {banner === "resume" ? "Start over" : "Watch again"}
+          </button>
+        </div>
+      )}
 
       {/* scoreboard */}
       {score && (
