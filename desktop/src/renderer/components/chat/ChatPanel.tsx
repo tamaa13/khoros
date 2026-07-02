@@ -315,13 +315,13 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange, searchOpen, on
           ) : m.told ? (
             <ToldYouSo key={m.id} text={m.text} />
           ) : m.image ? (
-            <ImageBubble key={m.id} src={m.image} caption={m.caption} onOpen={setLightbox} />
+            <ImageBubble key={m.id} src={m.image} caption={m.caption} onOpen={setLightbox} name={name} />
           ) : (
-            <AgentBubble key={m.id} text={m.text} tools={m.tools} />
+            <AgentBubble key={m.id} text={m.text} tools={m.tools} name={name} />
           ),
         )}
-        {gen && <GeneratingBubble pct={gen.pct} />}
-        {typing && <Typing />}
+        {gen && <GeneratingBubble pct={gen.pct} name={name} />}
+        {typing && <Typing name={name} />}
       </div>
 
       <Composer value={input} onChange={setInput} onSubmit={submit} onPick={setInput} mic={mic.status} onMic={mic.toggle} onAttach={attachPhoto} disabled={busy && !input.startsWith("/")} name={name} />
@@ -343,10 +343,10 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange, searchOpen, on
   );
 }
 
-function GeneratingBubble({ pct }: { pct: number }) {
+function GeneratingBubble({ pct, name }: { pct: number; name?: string }) {
   return (
     <div className="flex items-end gap-[10px]">
-      <AgentGlyph size={28} />
+      <AgentGlyph size={28} name={name} self />
       <div className="w-[78%] overflow-hidden rounded-[16px_16px_16px_5px] border border-surface-3 bg-[rgb(var(--c181a20))]">
         <div className="flex aspect-[4/3] flex-col items-center justify-center gap-[13px] [background:repeating-linear-gradient(115deg,rgb(var(--c161820)),rgb(var(--c161820))_11px,rgb(var(--c121319))_11px,rgb(var(--c121319))_22px)]">
           <Sparkles className="h-[26px] w-[26px] animate-pulse text-gold" />

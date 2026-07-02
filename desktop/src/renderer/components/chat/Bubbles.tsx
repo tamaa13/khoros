@@ -11,10 +11,10 @@ export interface ChatMsg {
   caption?: string;
 }
 
-export function AgentBubble({ text, tools }: { text: string; tools?: string[] }) {
+export function AgentBubble({ text, tools, name }: { text: string; tools?: string[]; name?: string }) {
   return (
     <div className="flex items-end gap-[10px] animate-rise">
-      <AgentGlyph size={28} />
+      <AgentGlyph size={28} name={name} self />
       <div className="max-w-[78%]">
         <div className="rounded-[16px_16px_16px_5px] border border-surface-3 bg-[rgb(var(--c181a20))] px-[14px] py-[11px] text-[14px] leading-[1.5] text-[rgb(var(--cdde0e6))]">{text}</div>
         {tools && tools.length > 0 && (
@@ -51,10 +51,10 @@ export function ToldYouSo({ text }: { text: string }) {
   );
 }
 
-export function Typing() {
+export function Typing({ name }: { name?: string }) {
   return (
     <div className="flex items-end gap-[10px]">
-      <AgentGlyph size={28} />
+      <AgentGlyph size={28} name={name} self />
       <div className="flex gap-[5px] rounded-[16px_16px_16px_5px] border border-surface-3 bg-[rgb(var(--c181a20))] px-4 py-[13px]">
         <span className="h-[7px] w-[7px] rounded-full bg-content-faint animate-bounce-dot" />
         <span className="h-[7px] w-[7px] rounded-full bg-content-faint animate-bounce-dot [animation-delay:.18s]" />
@@ -64,11 +64,11 @@ export function Typing() {
   );
 }
 
-export function ImageBubble({ src, caption, onOpen }: { src: string; caption?: string; onOpen: (src: string) => void }) {
+export function ImageBubble({ src, caption, onOpen, name }: { src: string; caption?: string; onOpen: (src: string) => void; name?: string }) {
   const url = `data:image/png;base64,${src}`;
   return (
     <div className="flex items-end gap-[10px] animate-rise">
-      <AgentGlyph size={28} />
+      <AgentGlyph size={28} name={name} self />
       <div className="max-w-[78%]">
         <button onClick={() => onOpen(url)} className="block overflow-hidden rounded-[16px_16px_16px_5px] border border-surface-3">
           <img src={url} alt={caption || "generated"} className="block w-full" />

@@ -41,28 +41,32 @@ export function Logo({ size = 40, variant = "full", className, float }: { size?:
   );
 }
 
-/** The tiny agent-avatar glyph — one node of the chorus: a lit member inside
- *  its orbit. Used on chat bubbles, crew cards and chips. */
-export function AgentGlyph({ size = 28, className }: { size?: number; className?: string }) {
+/** The agent avatar — its initial, set flat in the display face. Personal (B is
+ *  Budi, P is the Pundit), zero decoration; the user's own agent gets the gold
+ *  letter, everyone else stays neutral. */
+export function AgentGlyph({ size = 28, name, self = false, className }: { size?: number; name?: string; self?: boolean; className?: string }) {
+  const initial = (name?.trim()[0] ?? "K").toUpperCase();
   return (
     <span
-      className={className}
+      className={`display ${className ?? ""}`}
       style={{
         width: size,
         height: size,
         borderRadius: 99,
-        background: "radial-gradient(circle at 35% 30%,rgb(var(--c2a2412)),rgb(var(--c14110a)))",
+        background: "rgb(var(--s2))",
+        border: "1px solid rgb(var(--line2))",
+        color: self ? "rgb(var(--cf4c44c))" : "rgb(var(--textmuted))",
+        fontSize: size * 0.52,
+        lineHeight: 1,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         flex: "0 0 auto",
+        fontVariationSettings: "'wdth' 110",
+        userSelect: "none",
       }}
     >
-      <svg viewBox="0 0 100 100" width={size} height={size} fill="none">
-        <circle cx="50" cy="50" r="34" stroke="rgb(var(--c3a3320))" strokeWidth="6" />
-        <circle cx="50" cy="50" r="15" fill="rgb(var(--cf4c44c))" />
-        <circle cx="50" cy="16" r="9" fill="rgb(var(--cc49a33))" />
-      </svg>
+      {initial}
     </span>
   );
 }
