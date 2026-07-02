@@ -25,7 +25,7 @@ export function AppHeader({ name, tab, onTab, onRename, voice, onVoiceChange, la
   };
 
   return (
-    <div className="relative flex-shrink-0 bg-[rgb(var(--c0c0d11))] px-4 pt-[14px]">
+    <div className="relative flex-shrink-0 border-b border-[rgb(var(--c1f2128))] bg-[rgb(var(--c0c0d11))] px-4 pb-[12px] pt-[14px]">
       {settingsOpen && <SettingsMenu voice={voice} onVoiceChange={onVoiceChange} language={language} onLanguageChange={onLanguageChange} theme={theme} onThemeChange={onThemeChange} onClose={() => setSettingsOpen(false)} />}
       {/* identity row — the agent chip leads (the titlebar already carries the
           KHOROS wordmark; repeating it here was a wasted row) */}
