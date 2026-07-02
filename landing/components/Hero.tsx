@@ -3,10 +3,9 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { EASE } from "@/lib/motion";
+import { DownloadButton } from "@/components/DownloadButton";
 import { Mockup3D } from "@/components/Mockup3D";
 import { MatchNight } from "@/components/hero/MatchNight";
-
-const REPO = "https://github.com/tamaa13/khoros";
 
 const lineVariants = {
   hidden: { opacity: 0, y: 26, filter: "blur(8px)" },
@@ -72,17 +71,7 @@ export function Hero() {
         </motion.h1>
 
         <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.55, ease: EASE }} className="mt-7">
-          <a
-            href={REPO}
-            target="_blank"
-            rel="noreferrer"
-            className="group inline-flex items-center gap-2 rounded-full bg-gold px-7 py-3.5 text-[15px] font-bold tracking-tight text-gold-ink shadow-[var(--shadow-pill)] transition-transform hover:-translate-y-0.5 active:scale-[0.99]"
-          >
-            <span>Get Khoros</span>
-            <span aria-hidden className="transition-transform group-hover:translate-x-1">
-              →
-            </span>
-          </a>
+          <DownloadButton />
         </motion.div>
       </div>
 

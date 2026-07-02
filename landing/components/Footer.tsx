@@ -1,3 +1,4 @@
+import { DownloadButton } from "./DownloadButton";
 import { Mark } from "./Mark";
 import { Reveal } from "./Reveal";
 
@@ -13,17 +14,7 @@ export function ClosingCta() {
           <p className="max-w-[46ch] text-[14px] leading-[1.65] text-fog-2">
             Open source, runs on your machine. Built for the Tether Developers Cup on the QVAC SDK.
           </p>
-          <a
-            href={REPO}
-            target="_blank"
-            rel="noreferrer"
-            className="group inline-flex items-center gap-2 rounded-full bg-gold px-7 py-3.5 text-[14.5px] font-bold text-gold-ink shadow-[var(--shadow-pill)] transition-transform hover:-translate-y-0.5 active:scale-[0.99]"
-          >
-            Get Khoros on GitHub
-            <span aria-hidden className="transition-transform group-hover:translate-x-1">
-              →
-            </span>
-          </a>
+          <DownloadButton />
         </div>
       </Reveal>
     </section>
