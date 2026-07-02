@@ -57,8 +57,12 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange, searchOpen, on
     });
   }, []);
 
+  // First paint jumps straight to the latest message (smooth-scrolling through
+  // 200 restored messages looks silly); everything after eases.
+  const scrolledOnce = useRef(false);
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: scrolledOnce.current ? "smooth" : "auto" });
+    scrolledOnce.current = true;
   }, [msgs, typing, gen]);
 
   // Persist the thread so it survives app restarts (cap the tail to stay small).
@@ -243,22 +247,27 @@ export function ChatPanel({ name, onRename, voice, onVoiceChange, searchOpen, on
 
   return (
     <div className="flex h-full flex-col">
-      {searchOpen && (
-        <div className="flex flex-shrink-0 items-center gap-2 border-b border-[rgb(var(--c1f2128))] bg-[rgb(var(--c0c0d11))] px-4 py-[6px] animate-rise">
-          <Search className="h-[15px] w-[15px] flex-shrink-0 text-content-faint" strokeWidth={1.75} />
-          <input
-            ref={searchRef}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Escape" && onCloseSearch()}
-            placeholder="Search this chat…"
-            className="min-w-0 flex-1 bg-transparent text-[12.5px] text-content outline-none placeholder:text-content-faint"
-          />
-          <button onClick={onCloseSearch} className="flex h-[28px] w-[28px] items-center justify-center rounded-md text-content-faint hover:text-content" aria-label="Close search">
-            <X className="h-[14px] w-[14px]" />
-          </button>
+      {/* grid-rows 0fr→1fr animates the height, so the thread eases down
+          instead of jumping when search opens */}
+      <div className={`grid flex-shrink-0 transition-[grid-template-rows] duration-[260ms] ease-[cubic-bezier(.16,1,.3,1)] ${searchOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+        <div className="min-h-0 overflow-hidden">
+          <div className="flex items-center gap-2 border-b border-[rgb(var(--c1f2128))] bg-[rgb(var(--c0c0d11))] px-4 py-[6px]">
+            <Search className="h-[15px] w-[15px] flex-shrink-0 text-content-faint" strokeWidth={1.75} />
+            <input
+              ref={searchRef}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Escape" && onCloseSearch()}
+              placeholder="Search this chat…"
+              tabIndex={searchOpen ? 0 : -1}
+              className="min-w-0 flex-1 bg-transparent text-[12.5px] text-content outline-none placeholder:text-content-faint"
+            />
+            <button onClick={onCloseSearch} tabIndex={searchOpen ? 0 : -1} className="flex h-[28px] w-[28px] items-center justify-center rounded-md text-content-faint hover:text-content" aria-label="Close search">
+              <X className="h-[14px] w-[14px]" />
+            </button>
+          </div>
         </div>
-      )}
+      </div>
       <div ref={scrollRef} className="kh-scroll flex flex-1 flex-col gap-[14px] overflow-y-auto px-4 pb-2 pt-[18px]">
         {search.trim() && shown.length === 0 && <div className="mt-8 text-center text-[12.5px] text-content-faint">No messages match “{search}”.</div>}
         {shown.map((m) =>
